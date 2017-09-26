@@ -18,3 +18,8 @@ Major deadlines:
 --------------------------------------------------------------------------------
 Analytical Notes:
 09.18.17	Created GitHub repository
+
+09.26.17	Summarized NEI 2014 data for the two power plants
+		Estimated impacts per ton emitted
+		NOTE: The impacts per ton analysis is HIGHLY UNCERTAIN and should
+		really not be used or communicated to outside parties
