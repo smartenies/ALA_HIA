@@ -23,3 +23,6 @@ Analytical Notes:
 		Estimated impacts per ton emitted
 		NOTE: The impacts per ton analysis is HIGHLY UNCERTAIN and should
 		really not be used or communicated to outside parties
+
+10.12.17	Created spatial objects for the analysis
+		Mapped census variables at the census tract level
