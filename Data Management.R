@@ -133,12 +133,12 @@ ggsave(area_map, filename = "./Maps/Study Area.jpeg", device = "jpeg",
 
 h_grid <- readOGR(dsn = "./Data/Shapefiles", layer = "co_grid")
 summary(h_grid)
-save(h_grid, "./Data/Spatial Data/3x3_grid_latlong.RData")
+save(h_grid, file="./Data/Spatial Data/3x3_grid_latlong.RData")
 
 proj4string(h_grid) <- CRS("+init=epsg:4326") #' long/lat
 
 h_grid_utm <- spTransform(h_grid, CRS("+init=epsg:26912")) #UTM 13N
-save(h_grid_utm, "./Data/Spatial Data/3x3_grid_UTM.RData")
+save(h_grid_utm, file="./Data/Spatial Data/3x3_grid_UTM.RData")
 
 #' -----------------------------------------------------------------------------
 #' Reading in the ACS files and mapping key demographic/SES variables
