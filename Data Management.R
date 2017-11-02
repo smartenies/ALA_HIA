@@ -28,7 +28,7 @@ library(RColorBrewer)
 library(gridExtra)
 library(plyr)
 library(stringr)
-library(XLConnect)
+library(readxl)
 
 #' For ggplots
 simple_theme <- theme(
