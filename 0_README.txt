@@ -34,3 +34,6 @@ Analytical Notes:
 		plants
 		Started the CR coefficient database for the health-impact 
 		functions
+		Emailed Gordon Pierce at CDPHE to see if the state maintains its
+		own emissions inventory
+
