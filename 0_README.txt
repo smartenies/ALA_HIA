@@ -33,7 +33,11 @@ Analytical Notes:
 11.02.17	Summarized NEI 2008, 2011, and 2014 for the Comanche and Drake 
 		plants
 		Started the CR coefficient database for the health-impact 
-		functions
+		functions-- PM2.5 first
 		Emailed Gordon Pierce at CDPHE to see if the state maintains its
 		own emissions inventory
+
+11.13.17	Downloaded monitoring data for the SFR area for 2014:
+		Daily data from US EPA's AQS DataMart
+		Hourly data from CDPHE
 
