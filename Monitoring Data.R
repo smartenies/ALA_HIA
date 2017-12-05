@@ -1,4 +1,4 @@
-#' -----------------------------------------------------------------------------
+#' =============================================================================
 #' Project: American Lung Association HIA
 #' Date created: September 26, 2017
 #' Author: Sheena Martenies
@@ -12,7 +12,7 @@
 #' decommissioned by 2025.
 #' 
 #' This script scrapes the EPA and CDPHE websites for air monitor data
-#' -----------------------------------------------------------------------------
+#' =============================================================================
 
 library(ggplot2)
 library(reshape2)

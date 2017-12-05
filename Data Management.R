@@ -1,4 +1,4 @@
-#' -----------------------------------------------------------------------------
+#' =============================================================================
 #' Project: American Lung Association HIA
 #' Date created: September 26, 2017
 #' Author: Sheena Martenies
@@ -10,7 +10,7 @@
 #' power plants in the front range region of CO: Comanche (in Pueblo, CO) and 
 #' Martin Drake (in Colorado Springs, CO). The facilities are slated to be 
 #' decommissioned by 2025.
-#' -----------------------------------------------------------------------------
+#' =============================================================================
 
 library(foreign)
 library(sp)

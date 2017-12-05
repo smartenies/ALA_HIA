@@ -1,0 +1,163 @@
+#' =============================================================================
+#' Project: American Lung Association HIA
+#' Date created: September 26, 2017
+#' Author: Sheena Martenies
+#' Contact: Sheena.Martenies@colostate.edu
+#' 
+#' Description:
+#' 
+#' This project estimates the health impacts attributable to two coal-fired 
+#' power plants in the front range region of CO: Comanche (in Pueblo, CO) and 
+#' Martin Drake (in Colorado Springs, CO). The facilities are slated to be 
+#' decommissioned by 2025.
+#' 
+#' This script pools the CR coefficients for the HIA
+#'      PM2.5 coefficients are for the full year
+#'      O3 coefficients are for warm season months only
+#' =============================================================================
+
+library(foreign)
+library(sp)
+library(Hmisc)
+library(gstat)
+library(rgdal)
+library(ggplot2)
+library(ggmap)
+library(raster)
+library(rgeos)
+library(maptools)
+library(ggthemes)
+library(ggrepel)
+library(RColorBrewer)
+library(gridExtra)
+library(plyr)
+library(stringr)
+library(readxl)
+
+#' For ggplots
+simple_theme <- theme(
+  #aspect.ratio = 1,
+  text  = element_text(family="Calibri",size = 12, color = 'black'),
+  panel.spacing.y = unit(0,"cm"),
+  panel.spacing.x = unit(0.25, "lines"),
+  panel.grid.minor = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.border=element_rect(fill = NA),
+  panel.background=element_blank(),
+  axis.ticks = element_line(colour = "black"),
+  axis.text = element_text(color = "black", size=10),
+  # legend.position = c(0.1,0.1),
+  plot.margin=grid::unit(c(0,0,0,0), "mm"),
+  legend.key = element_blank()
+)
+windowsFonts(Calibri=windowsFont("TT Calibri"))
+options(scipen = 9999) #avoid scientific notation
+
+#' =============================================================================
+#' Read in the datasets and subset by pollutant and metric
+#' =============================================================================
+
+#' -----------------------------------------------------------------------------
+#' Read in the Excel sheet with the full table
+#' -----------------------------------------------------------------------------
+
+full_cr <- read_excel("./Data/Outcome CRs and Valuation.xlsx",
+                      sheet=1, skip=7)
+colnames(full_cr) <- tolower(colnames(full_cr))
+colnames(full_cr) <- gsub(" ", "_", colnames(full_cr))
+
+time_windows <- c("Warm season", "School year", NA)
+
+cr <- full_cr[which(full_cr$time_window %in% time_windows),]
+
+pm_cr <- cr[which(cr$pollutant=="PM2.5"),]
+o3_cr <- cr[which(cr$pollutant=="O3"),] 
+
+save(cr, pm_cr, o3_cr, full_cr, file="./Data/CR datasets.RData")
+
+#' =============================================================================
+#' Pool the CRs for each pollutant and outcome using the 'metafor' package
+#' =============================================================================
+
+load("./Data/CR datasets.RData")
+
+library(metafor)
+
+pols <- c("PM2.5", "O3")
+
+pooled_crs <- data.frame(matrix(ncol=9, nrow=0))
+
+colnames(pooled_crs) <- c("pol", "metric", "outcome", "n", 
+                          "cr_beta", "cr_se", "I^2", "Q", "Q_p")
+
+for (i in 1:length(pols)) {
+  cr_df <- cr[which(cr$pollutant == pols[i]),]
+  metrics <- unique(cr_df$metric)
+  
+  
+  for (j in 1:length(metrics)) {
+    met_df <- cr_df[which(cr_df$metric == metrics[j]),]
+    outcomes <- unique(met_df$outcome)
+    
+    for (k in 1:length(outcomes)) {
+      df <- met_df[which(met_df$outcome == outcomes[k]),] 
+      
+      #' #' Skip the meta analysis if there is only one study
+      #' if (nrow(df)==1) {
+      #'   pooled_crs[nrow(pooled_crs)+1,1] <- pols[i]
+      #'   pooled_crs[nrow(pooled_crs),2] <- metrics[j]
+      #'   pooled_crs[nrow(pooled_crs),3] <- outcomes[k]
+      #'   pooled_crs[nrow(pooled_crs),4] <- nrow(df)
+      #'   pooled_crs[nrow(pooled_crs),5] <- df$cr
+      #'   pooled_crs[nrow(pooled_crs),6] <- df$se
+      #'   next
+      #' }
+      
+      #' Pool the coefficients using a randome effects model
+      rma_model <- rma(yi = cr, sei = se, data=df)
+      pooled_crs[nrow(pooled_crs)+1,1] <- pols[i]
+      pooled_crs[nrow(pooled_crs),2] <- metrics[j]
+      pooled_crs[nrow(pooled_crs),3] <- outcomes[k]
+      pooled_crs[nrow(pooled_crs),4] <- nrow(df)
+      pooled_crs[nrow(pooled_crs),5] <- rma_model$beta[,1]
+      pooled_crs[nrow(pooled_crs),6] <- rma_model$se
+      pooled_crs[nrow(pooled_crs),7] <- rma_model$I2
+      pooled_crs[nrow(pooled_crs),8] <- rma_model$QE
+      pooled_crs[nrow(pooled_crs),9] <- rma_model$QEp
+      
+      #' Generate the forest plot and funnel plot
+      f_name <- paste("./Data/CR Plots/",pols[i], " ", metrics[j], 
+                      " ", outcomes[k]," forest.jpeg", sep="")
+      fun_name <- paste("./Data/CR Plots/",pols[i], " ", metrics[j], 
+                      " ", outcomes[k]," funnel.jpeg", sep="")
+      
+      jpeg(f_name)
+      forest(rma_model, slab=df$source, digits=4,
+             mlab=paste(pols[i], metrics[j], "\n", outcomes[k]))
+      dev.off()
+      
+      jpeg(fun_name)
+      funnel(rma_model, digits=4,
+             xlab=paste("Observed", pols[i], metrics[j], outcomes[k]))
+      dev.off()
+    }
+  }
+}
+
+save(pooled_crs, file="./Data/Pooled CRs.RData")
+write.csv(pooled_crs, file="./Data/Pooled CRs.csv",
+          row.names = F)
+
+
+  
+  
+  
+  
+  
+  
+  
+
+
+
+
+
