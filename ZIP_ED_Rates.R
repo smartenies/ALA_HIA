@@ -62,3 +62,7 @@ zip_rate_period <- co_hosp %>%
          cardiopulm_per_100p5y = (cardiopulm_n/total_pop5y)*100,
          cvd_per_100p5y = (cvd_n/total_pop5y)*100,
          resp_per_100p5y = (resp_n/total_pop5y)*100)
+
+# save zip estimate file
+write_path <- "./data/co_zip_rate_period.csv"
+write_csv(zip_rate_period, write_path)
