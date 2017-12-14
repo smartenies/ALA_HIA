@@ -105,6 +105,6 @@ plot <- ggplot(el_pueblo) +
 
 plot
 # save plot
-ggsave(filename = "./population_density.tiff", plot, 
-       width=8, height=8, device = "tiff")
+ggsave(filename = "./population_density.pdf", plot, 
+       width=7, height=8, device = "pdf")
 
