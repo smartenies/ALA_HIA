@@ -9,3 +9,8 @@
 /Maps
 /Spreadsheets
 /Temp
+
+# ignore image
+*.pdf
+*.tiff
+
