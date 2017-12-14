@@ -77,13 +77,20 @@ options(scipen = 10000) #avoid scientific notation
 #' base map for the area
 base_map <- get_map(location="Pueblo West, CO", maptype="terrain",
                     zoom = 8, source="google")
+ggmap(base_map)
 
 scale_bar <- ggsn::scalebar(location = "bottomright", dd2km = T, model="WGS84",
                             dist=20, st.bottom=F, st.size = 3, height=0.0125, 
                             x.min = -106, x.max = -103.075, 
                             y.min = 37.05, y.max = 39.7) 
 
-ggmap(base_map) + scale_bar + simple_theme
+n_arrow <- geom_segment(arrow=arrow(length=unit(4, "mm")),
+                        aes(x=-103.075, xend=-103.075, y=37.2, yend=37.35),
+                        color="black", size=1)
+n_label <- geom_text(aes(x=-103.075, y=37.4), label="N")
+                     
+
+
 map_crs <- "+proj=longlat +datum=WGS84"
 
 
@@ -119,7 +126,27 @@ rm(sfr_zcta_utm, sfr_zcta_utm_map)
 load("./Data/Spatial Data/power_plants_utm.RData")
 pp <- spTransform(pp_utm, CRS(map_crs))
 pp_df <- as.data.frame(pp)
+pp_df$id <- as.character(pp_df$id)
 rm(pp_utm)
+
+#' =============================================================================
+#' Map the study area
+#' =============================================================================
+area_map <- ggmap(base_map) +
+  ggtitle("HIA boundaries") +
+  geom_polygon(data=sfr_counties_map, aes(x=long, y=lat, group=group),
+               color="black", fill="NA", size=1) +
+  geom_point(data=pp_df, aes(x=long, y=lat),
+             color="blue", pch=17, cex=3) +
+  geom_text(data=pp_df, aes(x=long, y=lat),
+            label=pp_df$id, nudge_x = 0.2, nudge_y = -0.07, color="blue") +
+  xlab("") + ylab("") +
+  scale_bar + n_arrow + n_label +
+  theme(legend.position = "right") +
+  simple_theme2
+print(area_map)
+ggsave(area_map, filename = "./Maps/Study Area.jpeg", device = "jpeg", 
+       dpi=400, width = 6, height = 6, units="in")
 
 #' =============================================================================
 #' Map the hospitalization rates
@@ -154,7 +181,7 @@ cp_map <- ggmap(base_map) +
   scale_fill_manual(name="Hospitalizations\nper 100 persons", 
                     values=rev(col_list), na.value="grey50") +
   xlab("") + ylab("") +
-  scale_bar +
+  scale_bar + n_arrow + n_label +
   theme(legend.position = "right") +
   simple_theme2
 print(cp_map)
@@ -176,7 +203,7 @@ cvd_map <- ggmap(base_map) +
   scale_fill_manual(name="Hospitalizations\nper 100 persons", 
                     values=rev(col_list), na.value="grey50") +
   xlab("") + ylab("") +
-  scale_bar +
+  scale_bar + n_arrow + n_label +
   theme(legend.position = "right") +
   simple_theme2
 print(cvd_map)
@@ -198,7 +225,7 @@ res_map <- ggmap(base_map) +
   scale_fill_manual(name="Hospitalizations\nper 100 persons", 
                     values=rev(col_list), na.value="grey50") +
   xlab("") + ylab("") +
-  scale_bar +
+  scale_bar + n_arrow + n_label +
   theme(legend.position = "right") +
   simple_theme2
 print(res_map)
@@ -260,7 +287,7 @@ u5_map <- ggmap(base_map) +
   scale_fill_manual(name="Percentage of\nZIP code population", 
                     values=rev(col_list), na.value="grey50") +
   xlab("") + ylab("") +
-  scale_bar +
+  scale_bar + n_arrow + n_label +
   theme(legend.position = "right") +
   simple_theme2
 print(u5_map)
@@ -282,7 +309,7 @@ o64_map <- ggmap(base_map) +
   scale_fill_manual(name="Percentage of\nZIP code population", 
                     values=rev(col_list), na.value="grey50") +
   xlab("") + ylab("") +
-  scale_bar +
+  scale_bar + n_arrow + n_label +
   theme(legend.position = "right") +
   simple_theme2
 print(o64_map)
@@ -304,7 +331,7 @@ poc_map <- ggmap(base_map) +
   scale_fill_manual(name="Percentage of\nZIP code population", 
                     values=rev(col_list), na.value="grey50") +
   xlab("") + ylab("") +
-  scale_bar +
+  scale_bar + n_arrow + n_label +
   theme(legend.position = "right") +
   simple_theme2
 print(poc_map)
@@ -326,7 +353,7 @@ poc_map <- ggmap(base_map) +
   scale_fill_manual(name="Percentage of\nZIP code population", 
                     values=rev(col_list), na.value="grey50") +
   xlab("") + ylab("") +
-  scale_bar +
+  scale_bar + n_arrow + n_label +
   theme(legend.position = "right") +
   simple_theme2
 print(poc_map)
@@ -335,7 +362,7 @@ ggsave(poc_map, filename = "./Maps/POC Population.jpeg", device = "jpeg",
 
 #' less than hs
 hs_map <- ggmap(base_map) +
-  ggtitle("Percentage of the population over 25 years of age with less than a high school education") +
+  ggtitle("Percentage of the population over 25 years of age\nwith less than a high school education") +
   geom_polygon(data=sfr_acs, aes(x=long, y=lat, 
                                  group=group, fill=hs_breaks),
                color=NA, show.legend = T, alpha=0.5) +
@@ -348,7 +375,7 @@ hs_map <- ggmap(base_map) +
   scale_fill_manual(name="Percentage of\nZIP code population", 
                     values=rev(col_list), na.value="grey50") +
   xlab("") + ylab("") +
-  scale_bar +
+  scale_bar + n_arrow + n_label +
   theme(legend.position = "right") +
   simple_theme2
 print(hs_map)
@@ -370,7 +397,7 @@ eng_map <- ggmap(base_map) +
   scale_fill_manual(name="Percentage of\nZIP code households", 
                     values=rev(col_list), na.value="grey50") +
   xlab("") + ylab("") +
-  scale_bar +
+  scale_bar + n_arrow + n_label +
   theme(legend.position = "right") +
   simple_theme2
 print(eng_map)
@@ -379,7 +406,7 @@ ggsave(eng_map, filename = "./Maps/Limited English Households.jpeg", device = "j
 
 #' Households in poverty
 pov_map <- ggmap(base_map) +
-  ggtitle("Percentage of households with last year income below poverty level") +
+  ggtitle("Percentage of households with\nlast year income below poverty level") +
   geom_polygon(data=sfr_acs, aes(x=long, y=lat, 
                                  group=group, fill=pov_breaks),
                color=NA, show.legend = T, alpha=0.5) +
@@ -392,7 +419,7 @@ pov_map <- ggmap(base_map) +
   scale_fill_manual(name="Percentage of\nZIP code households", 
                     values=rev(col_list), na.value="grey50") +
   xlab("") + ylab("") +
-  scale_bar +
+  scale_bar + n_arrow + n_label +
   theme(legend.position = "right") +
   simple_theme2
 print(pov_map)
@@ -417,9 +444,127 @@ in_map <- ggmap(base_map) +
                              "$60,000 - $80,000", "$80,000 - 100,000",
                              ">$100,000")) +
   xlab("") + ylab("") +
-  scale_bar +
+  scale_bar + n_arrow + n_label +
   theme(legend.position = "right") +
   simple_theme2
 print(in_map)
 ggsave(in_map, filename = "./Maps/Median Income.jpeg", device = "jpeg", 
+       dpi=400, width = 7, height = 6, units="in")
+
+#' =============================================================================
+#' Fake grided data for exposure figures
+#' =============================================================================
+
+load("./Data/Spatial Data/sfr_counties_utm_map.RData")
+load("./Data/Spatial Data/sfr_zcta_utm_map.RData")
+load("./Data/Spatial Data/power_plants_utm.RData")
+
+pp_df <- as.data.frame(pp_utm)
+pp_df$id <- as.character(pp_df$id)
+
+plot_crs <- proj4string(sfr_zcta_utm)
+
+sfr_grid <- makegrid(sfr_zcta_utm, cellsize = 4000) #units are in m!
+colnames(sfr_grid) <- c("x", "y")
+sfr_grid$id <- rownames(sfr_grid)
+
+#' Simulate some spatially-correlated concentrations
+#' Remember that map units are m!
+
+d_total <- gstat(formula=total~1, locations=~x+y, dummy=T, beta=70, 
+                 model=vgm(psill=50, range=50000, model='Exp'), nmax=20)
+sim_total <- predict(d_total, newdata=sfr_grid, nsim=1)
+
+d_back <- gstat(formula=back~1, locations=~x+y, dummy=T, beta=30, 
+                model=vgm(psill=50, range=50000, model='Exp'), nmax=20)
+sim_back <- predict(d_back, newdata=sfr_grid, nsim=1)
+
+sfr_grid$total <- sim_total$sim1
+sfr_grid$back <- sim_back$sim1
+sfr_grid$diff <- sfr_grid$total - sfr_grid$back
+
+summary(sfr_grid)
+
+total_map <- ggplot() +
+  ggtitle("Baseline case O\u2083 concentration (ppb)") +
+  geom_tile(data=sfr_grid, aes(x=x, y=y, fill=total),
+            color=NA, show.legend = T) +
+  geom_polygon(data=sfr_counties_utm_map, aes(x=long, y=lat, group=group),
+               color="black", fill="NA", size=1) +
+  geom_point(data=pp_df, aes(x=long, y=lat),
+             color="black", pch=17, cex=3) +
+  scale_fill_gradient2(name="O\u2083 (ppb)", midpoint=mean(sfr_grid$total),
+                       low = "tan", mid = "cadetblue2", high="navy")+
+  xlab("") + ylab("") +
+  theme(legend.position = "right") +
+  simple_theme2
+print(total_map)
+ggsave(total_map, filename = "./Maps/Simulated Total O3.jpeg", device = "jpeg", 
+       dpi=400, width = 7, height = 6, units="in")
+
+
+back_map <- ggplot() +
+  ggtitle("Background O\u2083 concentration (ppb)") +
+  geom_tile(data=sfr_grid, aes(x=x, y=y, fill=back),
+            color=NA, show.legend = T) +
+  geom_polygon(data=sfr_counties_utm_map, aes(x=long, y=lat, group=group),
+               color="black", fill="NA", size=1) +
+  geom_point(data=pp_df, aes(x=long, y=lat),
+             color="black", pch=17, cex=3) +
+  scale_fill_gradient2(name="O\u2083 (ppb)", midpoint=mean(sfr_grid$back),
+                       low = "tan", mid = "cadetblue2", high="navy")+
+  xlab("") + ylab("") +
+  theme(legend.position = "right") +
+  simple_theme2
+print(back_map)
+ggsave(back_map, filename = "./Maps/Simulated Background O3.jpeg", device = "jpeg", 
+       dpi=400, width = 7, height = 6, units="in")
+
+
+pp_map <- ggplot() +
+  ggtitle("O\u2083 concentration (ppb) due to plant emissions") +
+  geom_tile(data=sfr_grid, aes(x=x, y=y, fill=diff),
+            color=NA, show.legend = T) +
+  geom_polygon(data=sfr_counties_utm_map, aes(x=long, y=lat, group=group),
+               color="black", fill="NA", size=1) +
+  geom_point(data=pp_df, aes(x=long, y=lat),
+             color="black", pch=17, cex=3) +
+  scale_fill_gradient2(name="O\u2083 (ppb)", midpoint=mean(sfr_grid$diff),
+                       low = "tan", mid = "cadetblue2", high="navy")+
+  xlab("") + ylab("") +
+  theme(legend.position = "right") +
+  simple_theme2
+print(pp_map)
+ggsave(pp_map, filename = "./Maps/Simulated Attributable O3.jpeg", device = "jpeg", 
+       dpi=400, width = 7, height = 6, units="in")
+
+#' Area average of fake ozone data over ZCTA
+sfr_pts <- SpatialPointsDataFrame(coords=sfr_grid[,c(1,2)],
+                                  proj4string = CRS(plot_crs),
+                                  data=sfr_grid)
+
+sfr_zcta_utm@data$ozone <- sp::over(sfr_zcta_utm, sfr_pts["diff"], fn=mean)
+sfr_zcta_utm_polygons <- fortify(sfr_zcta_utm, region="id")
+sfr_zcta_utm_map <- merge(sfr_zcta_utm_polygons, sfr_zcta_utm@data, by="id")
+rm(sfr_zcta_utm_polygons)
+
+#' Median Income
+ozone_map <- ggplot() +
+  ggtitle("Simulated ZCTA-level ozone concentration (ppb)") +
+  geom_polygon(data=sfr_zcta_utm_map, 
+               aes(x=long, y=lat, group=group, fill=ozone),
+               color=NA, show.legend = T) +
+  geom_polygon(data=sfr_counties_utm_map, aes(x=long, y=lat, group=group),
+               color="black", fill="NA", size=1) +
+  geom_polygon(data=sfr_zcta_utm_map, aes(x=long, y=lat, group=group),
+               color="grey50", fill="NA", size=0.5) +
+  geom_point(data=pp_df, aes(x=long, y=lat),
+             color="black", pch=17, cex=3) +
+  scale_fill_gradient2(name="O\u2083 (ppb)", midpoint=mean(sfr_grid$diff),
+                       low = "tan", mid = "cadetblue2", high="navy")+
+  xlab("") + ylab("") +
+  theme(legend.position = "right") +
+  simple_theme
+print(ozone_map)
+ggsave(ozone_map, filename = "./Maps/Simulated ZIP ozone.jpeg", device = "jpeg", 
        dpi=400, width = 7, height = 6, units="in")

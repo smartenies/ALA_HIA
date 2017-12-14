@@ -225,7 +225,7 @@ save(h_grid_utm, file="./Data/Spatial Data/3x3_grid_UTM.RData")
 #' Object for the location of the power plants
 #' =============================================================================
 
-pp_df <- data.frame(id = c("Marin Drake", "Comanche"),
+pp_df <- data.frame(id = c("Martin Drake", "Comanche"),
                     lat = c(38.8244, 38.2081),
                     long = c(-104.8331, -104.5747))
 
