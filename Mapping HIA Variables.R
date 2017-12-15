@@ -99,7 +99,7 @@ load("./Data/ACS_2010_2014/ACS.RData")
 acs$GEOID10 <- gsub("86000US", "", acs$GEOID)
 
 #' Hospitalization data
-hosp <- read.csv("./Data/co_zip_rate_period.csv", header=T)
+hosp <- read.csv("./Data/CHA Data/co_zip_rate_period.csv", header=T)
 hosp <- rename(hosp, c("ZIP" = "GEOID10"))
 zip_list <- unique(hosp$GEOID10)
 
