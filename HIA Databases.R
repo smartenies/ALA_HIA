@@ -122,11 +122,35 @@ write.table(co_pop, "./HIA Inputs/population.txt", row.names=F)
 
 
 #' hosptializations (from Ryan)
-hosp <- read.csv()
+hosp <- read.csv("./Data/CHA Data/co_zip_rate_period.csv", header=T)
+
+#' calculate rates per person per day
+hosp$hosp_cp <- hosp$cardiopulm_per_100p5y / 100 / 365
+hosp$hosp_cvd <- hosp$cvd_per_100p5y / 100 / 365
+hosp$hosp_res <- hosp$resp_per_100p5y / 100 / 365
+
+#' other morbitidies (See Ozone RIA 2015 and BenMAP user manual)
+morb <- data.frame(outcome = c("ed_ast", "hosp_mi", "minor_astc", "minor_asts",
+                               "minor_astw", "minor_mrad", "minor_sld", 
+                               "minor_wld", "minor_lrs", "ac_bronchitis"),
+                   pppd = c(.959/100/365, NA, 0.145, 0.074, 0.173, 0.02137, 9.9/180, 0.0057,
+                            0.0012, 0.043/365))
+outcomes <- unique(as.character(morb$outcome))
+morb2 <- as.data.frame(t(morb))
+colnames(morb2) <- outcomes
+morb2 <- morb2[-c(1),]
+morb2 <- morb2[rep(row.names(morb2), nrow(hosp)),]
+
+#' put them all together
+pppd <- hosp[,c("ZIP", "hosp_cp", "hosp_cvd", "hosp_res")]
+pppd <- cbind(pppd, morb2)
 
 
+rownames(pppd) <- seq(1:nrow(pppd))
 
+pppd <- rename(pppd, c("ZIP" = "GEOID"))
 
+write.table(pppd, "./HIA Inputs/rates.txt", row.names = F)
 
 #' -----------------------------------------------------------------------------
 #' Creating the outcome database-- CR (SE), age-group, and monetized value
