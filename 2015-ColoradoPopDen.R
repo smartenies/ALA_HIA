@@ -36,10 +36,17 @@ colorado_e <- extent(as.numeric(st_bbox(county_sf)[c(1,3,2,4)]))
 # crop raster, globe to colorado based on the extent of sf bbox
 colorado_popden_15 <- crop(popden_15, colorado_e)
 
+# save colorado raster for Sheena ------
+# write path
+raster_write_path <- paste0("./Data/2015-ColoradoPopDensity.tif")
+writeRaster(colorado_popden_15, filename = raster_write_path, format = "GTiff")
+
 # convert raster to polygon, then sf object (easier to map with ggplot)
 co_pop_sf <- st_as_sf(rasterToPolygons(colorado_popden_15))
 # rename long population density variable name
 co_pop_sf <- rename(co_pop_sf, popden = gpw.v4.population.density_2015)
+
+plot(co_pop_sf)
 
 # ggplot map of population density overlayed on counties sf file
 plot <- ggplot(county_sf) +
