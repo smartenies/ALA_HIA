@@ -70,7 +70,7 @@ zcta_r <- rasterize(zcta_p, zcta_r, mask=T, field='GEOID_NUM')
 plot(zcta_r,colNA="grey50")
 plot(zcta_p, col=NA, border="blue", colNA="black", add=T)
 
-
+#https://gis.stackexchange.com/questions/214116/add-new-column-in-raster-attribute-table
 
 #' -----------------------------------------------------------------------------
 #' Exposure metric functions
