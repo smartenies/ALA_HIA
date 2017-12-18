@@ -11,10 +11,7 @@
 #' Martin Drake (in Colorado Springs, CO). The facilities are slated to be 
 #' decommissioned by 2025.
 #' 
-#' This script creates the CR, population, and baseline heath rate files needed
-#' for the HIA analysis
-#' 
-#' Creating for the entire state of Colorado
+#' This script generates the databases used in the HIA
 #' =============================================================================
 
 library(foreign)

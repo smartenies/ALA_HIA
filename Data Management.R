@@ -49,95 +49,39 @@ simple_theme <- theme(
 windowsFonts(Calibri=windowsFont("TT Calibri"))
 options(scipen = 9999) #avoid scientific notation
 
+geo_data <- "C:/Users/semarten/Documents/Geodatabases"
+
+#' =============================================================================
+#' Object for the location of the power plants
+#' =============================================================================
+
+pp_df <- data.frame(id = c("Martin Drake", "Comanche"),
+                    lat = c(38.8244, 38.2081),
+                    long = c(-104.8331, -104.5747))
+
+pp <- pp_df
+coordinates(pp) <- c("long", "lat")
+proj4string(pp) <- CRS("+init=epsg:4326")
+
+pp_utm <- spTransform(pp, CRS("+init=epsg:26913"))
+pp_df <- as.data.frame(pp_utm)
+
+points(pp_utm, col="red", pch=16)
+
+save(pp_utm, pp_df, file="./Data/Spatial Data/power_plants_utm.RData")
+
 #' =============================================================================
 #' Census tract shapefiles and spatial objects for R
 #' Use the "_map" objects for ggplots
 #' =============================================================================
 
-#' Front Range counties: Adams (001), Arapahoe (005), Boulder (013), Broomfield
-#' (014), Clear Creek (019), Denver (031), Douglas (035), Elbert (039), El Paso 
-#' (041), Fremont (043), Gilpin (047), Jefferson (059), Larimer (069), Park (093), 
-#' Pueblo (101), Teller (119), Weld (123), 
-
-#' fr <- c("001", "005", "013", "014", "019", "031", "035", "039", "043", "041", 
-#'         "047", "059", "069", "093", "101", "119", "123")
-#' 
-#' #' Colorado Census Tracts
-#' co_tracts <- readOGR(dsn = "./Data/Shapefiles", layer = "CO_Tracts_2014")
-#' co_tracts$GEOID <- as.character(co_tracts$GEOID)
-#' plot(co_tracts)
-#' save(co_tracts, file="./Data/Spatial Data/co_tracts_latlong.RData")
-#' 
-#' co_tracts_utm <- spTransform(co_tracts, 
-#'                              CRS("+init=epsg:26913")) #Project to UTM 13N
-#' co_tracts_utm@data$id <- rownames(co_tracts_utm@data)
-#' co_tracts_utm_polygons <- fortify(co_tracts_utm, region="id")
-#' co_tracts_utm_map <- merge(co_tracts_utm_polygons, co_tracts_utm@data, by="id")
-#' rm(co_tracts_utm_polygons)
-#' save(co_tracts_utm_map, co_tracts_utm, 
-#'      file="./Data/Spatial Data/co_tracts_utm_map.RData")
-#' 
-#' co_bound_utm <- unionSpatialPolygons(co_tracts_utm, 
-#'                                      IDs=co_tracts_utm@data$STATEFP,
-#'                                      avoidUnaryUnion = T)
-#' co_bound_utm_polygons <- fortify(co_bound_utm, region="id")
-#' co_bound_utm_map <- co_bound_utm_polygons
-#' rm(co_bound_utm_polygons)
-#' save(co_bound_utm_map, co_bound_utm, 
-#'      file="./Data/Spatial Data/co_bound_utm_map.RData")
-#' 
-#' #' Front Range Census Tracts
-#' fr_tracts <- co_tracts[which(co_tracts$COUNTYFP %in% fr),]
-#' plot(fr_tracts)
-#' save(fr_tracts, 
-#'      file="./Data/Spatial Data/fr_tracts_latlong.RData")
-#' 
-#' fr_tracts_utm <- spTransform(fr_tracts, 
-#'                              CRS("+init=epsg:26913")) #Project to UTM 13N
-#' fr_tracts_utm@data$id <- rownames(fr_tracts_utm@data)
-#' fr_tracts_utm_polygons <- fortify(fr_tracts_utm, region="id")
-#' fr_tracts_utm_map <- merge(fr_tracts_utm_polygons, fr_tracts_utm@data, by="id")
-#' rm(fr_tracts_utm_polygons)
-#' save(fr_tracts_utm_map, fr_tracts_utm, 
-#'      file="./Data/Spatial Data/fr_tracts_utm_map.RData")
-#' 
-#' fr_bound_utm <- unionSpatialPolygons(fr_tracts_utm, 
-#'                                      IDs=fr_tracts_utm@data$STATEFP,
-#'                                      avoidUnaryUnion = T)
-#' fr_bound_utm_polygons <- fortify(fr_bound_utm, region="id")
-#' fr_bound_utm_map <- fr_bound_utm_polygons
-#' rm(fr_bound_utm_polygons)
-#' save(fr_bound_utm_map, fr_bound_utm, 
-#'      file="./Data/Spatial Data/fr_tbound_utm_map.RData")
-#' 
-#' load("./Data/Spatial Data/fr_tracts_utm_map.RData")
-#' load("./Data/Spatial Data/fr_bound_utm_map.RData")
-#' 
-#' area_map <- ggplot() +
-#'   ggtitle("Census tracts in the Front Range Urban Corridor") +
-#'   geom_polygon(data=fr_tracts_utm_map, aes(x=long/1000, y=lat/1000, group=group),
-#'                color="black", fill="lightblue", alpha=0.2) +
-#'   geom_polygon(data=fr_bound_utm_map, aes(x=long/1000, y=lat/1000, group=group),
-#'                color="blue", fill=NA, size=1.5) +
-#'   xlab("UTM X (km)") + ylab("UTM Y (km)") +
-#'   simple_theme
-#' print(area_map)
-#' ggsave(area_map, filename = "./Maps/Study Area.jpeg", device = "jpeg", 
-#'        dpi=400, width = 7, height = 6, units="in")
-
-#' -----------------------------------------------------------------------------
-#' ZCTA shapefiles and spatial objects for R
-#' Use the "_map" objects for ggplots
-#' -----------------------------------------------------------------------------
-
 #' Colorado ZIP code tabulation areas
-co_zcta <- readOGR(dsn = "./Data/Shapefiles", layer = "CO_ZCTA_2014")
+co_zcta <- readOGR(dsn = geo_data, layer = "CO_ZCTA_2014")
 co_zcta$GEOID10 <- as.character(co_zcta$GEOID10)
 plot(co_zcta)
 save(co_zcta, file="./Data/Spatial Data/co_zcta_latlong.RData")
 
-co_zcta_utm <- spTransform(co_zcta, 
-                             CRS("+init=epsg:26913")) #Project to UTM 13N
+co_zcta_utm <- spTransform(co_zcta, CRS("+init=epsg:26913")) #UTM 13N
 co_zcta_utm@data$id <- rownames(co_zcta_utm@data)
 co_zcta_utm_polygons <- fortify(co_zcta_utm, region="id")
 co_zcta_utm_map <- merge(co_zcta_utm_polygons, co_zcta_utm@data, by="id")
@@ -154,14 +98,12 @@ save(zcta_list, file="./Data/Spatial Data/zcta_list.RData")
 
 sfr <- c("08027", "08041", "08043", "08101", "08119")
 
-counties <- readOGR(dsn = "C:/Users/semarten/Documents/Geodatabases", 
-                    layer = "us_counties_2010")
+counties <- readOGR(dsn = geo_data, layer = "us_counties_2010")
 counties@data$GEOID10 <- as.character(counties@data$GEOID10)
 counties@data$state <- substr(counties@data$GEOID10, 1, 2)
 
 co_counties <- counties[which(counties@data$state == "08"),]
-co_counties_utm <- spTransform(co_counties, 
-                           CRS("+init=epsg:26913")) #Project to UTM 13N
+co_counties_utm <- spTransform(co_counties, CRS("+init=epsg:26913")) #UTM 13N
 co_counties_utm@data$id <- rownames(co_counties_utm@data)
 co_counties_utm_polygons <- fortify(co_counties_utm, region="id")
 co_counties_utm_map <- merge(co_counties_utm_polygons, 
@@ -171,8 +113,7 @@ save(co_counties_utm_map, co_counties_utm,
      file="./Data/Spatial Data/co_counties_utm_map.RData")
 
 sfr_counties <- co_counties[which(co_counties@data$GEOID %in% sfr),]
-sfr_counties_utm <- spTransform(sfr_counties, 
-                               CRS("+init=epsg:26913")) #Project to UTM 13N
+sfr_counties_utm <- spTransform(sfr_counties, CRS("+init=epsg:26913")) #UTM 13N
 sfr_counties_utm@data$id <- rownames(sfr_counties_utm@data)
 sfr_counties_utm_polygons <- fortify(sfr_counties_utm, region="id")
 sfr_counties_utm_map <- merge(sfr_counties_utm_polygons, 
@@ -182,8 +123,8 @@ save(sfr_counties_utm_map, sfr_counties_utm,
      file="./Data/Spatial Data/sfr_counties_utm_map.RData")
 
 sfr_zcta <- co_zcta[sfr_counties,]
-sfr_zcta_utm <- spTransform(sfr_zcta, 
-                           CRS("+init=epsg:26913")) #Project to UTM 13N
+sfr_zcta_utm <- spTransform(sfr_zcta, CRS("+init=epsg:26913")) #UTM 13N
+#sfr_zcta <- gIntersection(co_zcta_utm, sfr_counties_utm, byid=T)
 sfr_zcta_utm@data$id <- rownames(sfr_zcta_utm@data)
 sfr_zcta_utm_polygons <- fortify(sfr_zcta_utm, region="id")
 sfr_zcta_utm_map <- merge(sfr_zcta_utm_polygons, sfr_zcta_utm@data, by="id")
@@ -220,25 +161,6 @@ proj4string(h_grid) <- CRS("+init=epsg:4326") #' long/lat
 
 h_grid_utm <- spTransform(h_grid, CRS("+init=epsg:26913")) #UTM 13N
 save(h_grid_utm, file="./Data/Spatial Data/3x3_grid_UTM.RData")
-
-#' =============================================================================
-#' Object for the location of the power plants
-#' =============================================================================
-
-pp_df <- data.frame(id = c("Martin Drake", "Comanche"),
-                    lat = c(38.8244, 38.2081),
-                    long = c(-104.8331, -104.5747))
-
-pp <- pp_df
-coordinates(pp) <- c("long", "lat")
-proj4string(pp) <- CRS("+init=epsg:4326")
-
-pp_utm <- spTransform(pp, CRS("+init=epsg:26913"))
-pp_df <- as.data.frame(pp_utm)
-
-points(pp_utm, col="red", pch=16)
-
-save(pp_utm, pp_df, file="./Data/Spatial Data/power_plants_utm.RData")
 
 #' =============================================================================
 #' ACS demographic and socioeconomic variables
