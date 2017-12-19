@@ -12,10 +12,6 @@
 #' decommissioned by 2025.
 #' 
 #' This script generates the exposure data for each ZCTA in the area
-#'     1) The ZCTAs are rasterized (resolution = xx m)
-#'     2) Ppulation density is assigned to ZCTA cells
-#'     3) The 4 km x 4 km grid is downscaled to a XX m grid
-#'     4) Daily population-weighted exposure metrics are calculated
 #' =============================================================================
 
 library(foreign)
@@ -41,36 +37,10 @@ library(readxl)
 geo_data <- "C:/Users/semarten/Documents/Geodatabases"
 
 #' -----------------------------------------------------------------------------
-#' 1) Rasterize ZCTAs in Colorado
-#' Assigns the ZCTA identifier to the population density grid
-#' Used to generate population-weighted exposure metrics for each ZCTA and day 
+#' 
 #' -----------------------------------------------------------------------------
 
-#' Read in the population density geotiff
-pop_den <- raster(paste(geo_data, "/2015_CO_PopDensity.tif", sep=""))
-summary(pop_den)
-res(pop_den)
 
-load("./Data/Spatial Data/co_zcta_latlong.RData")
-zcta_p <- spTransform(co_zcta, CRS=proj4string(pop_den)) #' match CRS
-
-plot(pop_den)
-plot(co_zcta, add=T)
-
-#' add a numeric identifier
-zcta_p$GEOID_NUM <- as.numeric(zcta_p$GEOID10)
-link <- zcta_p@data[,c("GEOID10", "GEOID_NUM")]
-
-#' rasterize ZCTA
-ext <- extent(pop_den)
-zcta_r <- raster(ext, res=res(pop_den))
-crs(zcta_r) <- proj4string(pop_den)
-zcta_r <- rasterize(zcta_p, zcta_r, mask=T, field='GEOID_NUM')
-
-plot(zcta_r,colNA="grey50")
-plot(zcta_p, col=NA, border="blue", colNA="black", add=T)
-
-#https://gis.stackexchange.com/questions/214116/add-new-column-in-raster-attribute-table
 
 #' -----------------------------------------------------------------------------
 #' Exposure metric functions
