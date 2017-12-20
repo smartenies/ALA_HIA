@@ -103,6 +103,11 @@ hosp <- read.csv("./Data/CHA Data/co_zip_rate_period.csv", header=T)
 hosp <- rename(hosp, c("ZIP" = "GEOID10"))
 zip_list <- unique(hosp$GEOID10)
 
+#' Hospitalization data (65+ rates)
+hosp65 <- read.csv("./Data/CHA Data/co_zip_65plus_rate_period.csv", header=T)
+hosp65 <- rename(hosp65, c("ZIP" = "GEOID10"))
+zip_list <- unique(hosp$GEOID10)
+
 #' Colors for cloropleth maps
 col_list <- c("#d7191c", "#fdae61", "#ffff66", "#abd9e9", "#2c7bb6")
 
@@ -231,6 +236,97 @@ res_map <- ggmap(base_map) +
 print(res_map)
 ggsave(res_map, filename = "./Maps/Res Hospitalization Rates.jpeg", device = "jpeg", 
        dpi=400, width = 7, height = 6, units="in")
+
+#' =============================================================================
+#' Map the hospitalization rates (65+ only)
+#' =============================================================================
+
+sfr_zip <- sfr_zcta_map[which(sfr_zcta_map$GEOID10 %in% zip_list),]
+
+sfr_hosp65 <- merge(sfr_zip, hosp65, by="GEOID10")
+
+sfr_hosp65$cp_breaks <- cut(sfr_hosp65$cardiopulm_per_100_65p5y, 
+                          breaks=c(0,5,10,15,20,
+                                   max(sfr_hosp65$cardiopulm_per_100_65p5y, na.rm=T)),
+                          include.lowest=T)
+sfr_hosp65$cvd_breaks <- cut(sfr_hosp65$cvd_per_100_65p5y, 
+                           breaks=c(0,2,4,6,8,
+                                    max(sfr_hosp65$cvd_per_100_65p5y, na.rm=T)),
+                           include.lowest=T)
+sfr_hosp65$res_breaks <- cut(sfr_hosp65$resp_per_100_65p5y, 
+                           breaks=c(0,1.5,3,5.5,7,
+                                    max(sfr_hosp65$resp_per_100_65p5y, na.rm=T)),
+                           include.lowest=T)
+
+#' Cardiopulmonary hosptializations per 100 persons
+cp65_map <- ggmap(base_map) +
+  ggtitle("Cardiopulmonary hospitalizations (adults 65 years and older)") +
+  geom_polygon(data=sfr_hosp65, aes(x=long, y=lat, 
+                                  group=group, fill=cp_breaks),
+               color=NA, show.legend = T, alpha=0.5) +
+  geom_polygon(data=sfr_zcta_map, aes(x=long, y=lat, group=group),
+               color="grey70", fill="NA", size=0.5) +
+  geom_polygon(data=sfr_counties_map, aes(x=long, y=lat, group=group),
+               color="black", fill="NA", size=1) +
+  geom_point(data=pp_df, aes(x=long, y=lat),
+             color="black", pch=17, cex=3) +
+  scale_fill_manual(name="Hospitalizations\nper 100 persons 65+", 
+                    values=rev(col_list), na.value="grey50") +
+  xlab("") + ylab("") +
+  scale_bar + n_arrow + n_label +
+  theme(legend.position = "right") +
+  simple_theme2
+print(cp65_map)
+ggsave(cp65_map, filename = "./Maps/CP Hospitalization Rates 65+.jpeg", 
+       device = "jpeg", 
+       dpi=400, width = 7, height = 6, units="in")
+
+#' CVD hosptializations per 100 persons
+cvd65_map <- ggmap(base_map) +
+  ggtitle("Cardiovascular hospitalizations (adults 65 years and older)") +
+  geom_polygon(data=sfr_hosp65, aes(x=long, y=lat, 
+                                  group=group, fill=cvd_breaks),
+               color=NA, show.legend = T, alpha=0.5) +
+  geom_polygon(data=sfr_zcta_map, aes(x=long, y=lat, group=group),
+               color="grey70", fill="NA", size=0.5) +
+  geom_polygon(data=sfr_counties_map, aes(x=long, y=lat, group=group),
+               color="black", fill="NA", size=1) +
+  geom_point(data=pp_df, aes(x=long, y=lat),
+             color="black", pch=17, cex=3) +
+  scale_fill_manual(name="Hospitalizations\nper 100 persons 65+", 
+                    values=rev(col_list), na.value="grey50") +
+  xlab("") + ylab("") +
+  scale_bar + n_arrow + n_label +
+  theme(legend.position = "right") +
+  simple_theme2
+print(cvd65_map)
+ggsave(cvd65_map, filename = "./Maps/CVD Hospitalization Rates 65+",
+       device="jpeg",
+       dpi=400, width = 7, height = 6, units="in")
+
+#' Respiratory hosptializations per 100 persons
+res65_map <- ggmap(base_map) +
+  ggtitle("Respiratory hospitalizations (adults 65 years and older)") +
+  geom_polygon(data=sfr_hosp65, aes(x=long, y=lat, 
+                                  group=group, fill=res_breaks),
+               color=NA, show.legend = T, alpha=0.5) +
+  geom_polygon(data=sfr_zcta_map, aes(x=long, y=lat, group=group),
+               color="grey70", fill="NA", size=0.5) +
+  geom_polygon(data=sfr_counties_map, aes(x=long, y=lat, group=group),
+               color="black", fill="NA", size=1) +
+  geom_point(data=pp_df, aes(x=long, y=lat),
+             color="black", pch=17, cex=3) +
+  scale_fill_manual(name="Hospitalizations\nper 100 persons 65+", 
+                    values=rev(col_list), na.value="grey50") +
+  xlab("") + ylab("") +
+  scale_bar + n_arrow + n_label +
+  theme(legend.position = "right") +
+  simple_theme2
+print(res65_map)
+ggsave(res65_map, filename = "./Maps/Res Hospitalization Rates 65+.jpeg", 
+       device = "jpeg", 
+       dpi=400, width = 7, height = 6, units="in")
+
 
 #' =============================================================================
 #' Map the ACS variables
