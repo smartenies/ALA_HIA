@@ -9,7 +9,6 @@
 # library ----
 library(tidyverse)
 
-
 # read file and create some variables -----
 co_hosp <- read_csv("./Data/CHA Data/co_hosp_w_outcome_df.csv") %>% 
   # noticed broomfield county_geo 014 was sometimes assigned county_final 159
@@ -34,8 +33,6 @@ co_hosp <- read_csv("./Data/CHA Data/co_hosp_w_outcome_df.csv") %>%
 
 
 # read in populations ----
-# zip_pop <- read_csv(paste0("../colorado_wildfire/data/shapefiles/",
-#   "2014_ZCTA_Population/Populations_CO_ZCTA_2014.txt")) %>% 
 zip_pop <- read_csv("./Data/5-year Populations/Populations_CO_ZCTA_2014.txt") %>% 
     #'  B01001e20    Male population 65-66
     #'  B01001e21    Male population 67-69
