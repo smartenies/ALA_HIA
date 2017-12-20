@@ -300,7 +300,7 @@ cvd65_map <- ggmap(base_map) +
   theme(legend.position = "right") +
   simple_theme2
 print(cvd65_map)
-ggsave(cvd65_map, filename = "./Maps/CVD Hospitalization Rates 65+",
+ggsave(cvd65_map, filename = "./Maps/CVD Hospitalization Rates 65+.jpeg",
        device="jpeg",
        dpi=400, width = 7, height = 6, units="in")
 
