@@ -14,6 +14,9 @@
 #' This script pools the CR coefficients for the HIA
 #'      PM2.5 coefficients are for the full year
 #'      O3 coefficients are for warm season months only
+#'      
+#' Edit 01.08.18: Added a pooled estimate for PM2.5 and asthma exacerbations
+#' using the description in the 2012 EPA RIA for the PM2.5 NAAQS (5-44)
 #' =============================================================================
 
 library(foreign)
@@ -113,7 +116,7 @@ for (i in 1:length(pols)) {
       #'   next
       #' }
       
-      #' Pool the coefficients using a randome effects model
+      #' Pool the coefficients using a random effects model
       rma_model <- rma(yi = cr, sei = se, data=df)
       pooled_crs[nrow(pooled_crs)+1,1] <- pols[i]
       pooled_crs[nrow(pooled_crs),2] <- metrics[j]
@@ -145,13 +148,51 @@ for (i in 1:length(pols)) {
 }
 
 save(pooled_crs, file="./Data/Pooled CRs.RData")
+
+#' =============================================================================
+#' Additional estimate of asthma exacerbations for PM2.5
+#' Based on 2012 RIA for the PM2.5 NAAQS:
+#'      1) Pool estimates for shortness of breath and cough using random effects
+#'      2) Pool SoB/cough with wheeze using random effects
+#' =============================================================================
+
+load("./Data/Pooled CRs.RData")
+load("./Data/CR datasets.RData")
+
+library(metafor)
+
+ast_outcomes1 <- c("minor_astc", "minor_asts")
+ast_outcomes2 <- c("minor_astw")
+
+pm_ast_cr1 <- cr[which(cr$pollutant=="PM2.5" & cr$outcome %in% ast_outcomes1),]
+pm_ast_cr2 <- cr[which(cr$pollutant=="PM2.5" & cr$outcome %in% ast_outcomes2),]
+
+#' meta-analysis for shortness of breath and cough
+rma_model1 <- rma(yi = cr, sei = se, data=pm_ast_cr1)
+
+#' get the first pooled beta and SE into the second dataset 
+pm_ast_cr2[nrow(pm_ast_cr2)+1,1] <- "PM2.5"
+pm_ast_cr2[nrow(pm_ast_cr2),3] <- "minor_ast"
+pm_ast_cr2[nrow(pm_ast_cr2),16] <- rma_model1$beta[,1]
+pm_ast_cr2[nrow(pm_ast_cr2),19] <- rma_model1$se
+
+#' meta-analysis for the first pooled estimate and wheeze
+rma_model2 <- rma(yi = cr, sei = se, data=pm_ast_cr2)
+
+#' add final beta and se to the pooled CR dataset
+pooled_crs[nrow(pooled_crs)+1,1] <- "PM2.5"
+pooled_crs[nrow(pooled_crs),2] <- "24 h mean"
+pooled_crs[nrow(pooled_crs),3] <- "minor_ast"
+pooled_crs[nrow(pooled_crs),4] <- 2
+pooled_crs[nrow(pooled_crs),5] <- rma_model2$beta[,1]
+pooled_crs[nrow(pooled_crs),6] <- rma_model2$se
+pooled_crs[nrow(pooled_crs),7] <- rma_model2$I2
+pooled_crs[nrow(pooled_crs),8] <- rma_model2$QE
+pooled_crs[nrow(pooled_crs),9] <- rma_model2$QEp
+
+save(pooled_crs, file="./Data/Pooled CRs.RData")
 write.csv(pooled_crs, file="./Data/Pooled CRs.csv",
           row.names = F)
-
-
-  
-  
-  
   
   
   

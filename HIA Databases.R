@@ -116,22 +116,26 @@ write.table(co_pop, "./HIA Inputs/population.txt", row.names=F)
 #' -----------------------------------------------------------------------------
 
 #' mortality
+mort <- read.csv("./Data/VS Data/co_mortality_zip_rate_period.csv", header=T)
+mort$mort_ac <- mort$all_cause_per_10005y / 1000 / 365
+mort$mort_na <- mort$non_accidental_per_1000p5y / 1000 / 365
 
-
-#' hosptializations (from Ryan)
-hosp <- read.csv("./Data/CHA Data/co_zip_rate_period.csv", header=T)
+#' hosptializations for the 65+ population (from Ryan)
+hosp <- read.csv("./Data/CHA Data/co_zip_65plus_rate_period.csv", header=T)
 
 #' calculate rates per person per day
-hosp$hosp_cp <- hosp$cardiopulm_per_100p5y / 100 / 365
-hosp$hosp_cvd <- hosp$cvd_per_100p5y / 100 / 365
-hosp$hosp_res <- hosp$resp_per_100p5y / 100 / 365
+hosp$hosp_cp <- hosp$cardiopulm_per_100_65p5y / 100 / 365
+hosp$hosp_cvd <- hosp$cvd_per_100_65p5y / 100 / 365
+hosp$hosp_res <- hosp$resp_per_100_65p5y / 100 / 365
 
 #' other morbitidies (See Ozone RIA 2015 and BenMAP user manual)
+#' minor_ast is mean of cough, sob, and wheeze
 morb <- data.frame(outcome = c("ed_ast", "hosp_mi", "minor_astc", "minor_asts",
-                               "minor_astw", "minor_mrad", "minor_sld", 
+                               "minor_astw", "minor_ast", "minor_mrad", "minor_sld", 
                                "minor_wld", "minor_lrs", "ac_bronchitis"),
-                   pppd = c(.959/100/365, NA, 0.145, 0.074, 0.173, 0.02137, 9.9/180, 0.0057,
-                            0.0012, 0.043/365))
+                   pppd = c(.959/100/365, NA, 0.067, 0.037, 
+                            0.076, 0.067, 0.02137, 9.9/180, 
+                            0.0057, 0.0012, 0.043/365))
 outcomes <- unique(as.character(morb$outcome))
 morb2 <- as.data.frame(t(morb))
 colnames(morb2) <- outcomes
@@ -139,9 +143,11 @@ morb2 <- morb2[-c(1),]
 morb2 <- morb2[rep(row.names(morb2), nrow(hosp)),]
 
 #' put them all together
-pppd <- hosp[,c("ZIP", "hosp_cp", "hosp_cvd", "hosp_res")]
-pppd <- cbind(pppd, morb2)
+hosp2 <- hosp[,c("ZIP", "hosp_cp", "hosp_cvd", "hosp_res")]
 
+pppd <- mort[,c("ZIP", "mort_ac", "mort_na")]
+pppd <- merge(pppd, hosp2, by="ZIP")
+pppd <- cbind(pppd, morb2)
 
 rownames(pppd) <- seq(1:nrow(pppd))
 
