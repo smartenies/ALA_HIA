@@ -46,12 +46,16 @@ zip_pop <- read_csv("./Data/5-year Populations/Populations_CO_ZCTA_2014.txt") %>
     #'  B01001e47    Female population 75-79
     #'  B01001e48    Female population 80-84
     #'  B01001e49    Female populiation 85+
-  #select(ZCTA5CE10, B01001e1) %>%  
-  select(ZCTA5CE10, B01001e1, B01001e20, B01001e21, B01001e23, B01001e24,
-         B01001e25, B01001e44, B01001e45, B01001e46, B01001e47, B01001e48) %>%
-  mutate(age_65plus = (B01001e20 + B01001e21 + B01001e23 + B01001e24 +
-                         B01001e25 + B01001e44 + B01001e45 + B01001e46 + 
-                         B01001e47 + B01001e48)) %>%
+  select(ZCTA5CE10, B01001e1, 
+         B01001e20, B01001e21, B01001e22, B01001e23, B01001e24, 
+         B01001e25, 
+         B01001e44, B01001e45, B01001e46, B01001e47, B01001e48,
+         B01001e49) %>%
+  mutate(age_65plus = (B01001e20 + B01001e21 + B01001e22 + B01001e23 + 
+                       B01001e24 + B01001e25 + 
+                         
+                       B01001e44 + B01001e45 + B01001e46 + B01001e47 + 
+                       B01001e48 + B01001e49)) %>%
   # need to only extract the last part of the GEOID to join 
   select(ZCTA5CE10, B01001e1, age_65plus) %>%
   rename(ZIP = ZCTA5CE10,
