@@ -89,8 +89,6 @@ n_arrow <- geom_segment(arrow=arrow(length=unit(4, "mm")),
                         color="black", size=1)
 n_label <- geom_text(aes(x=-103.075, y=37.4), label="N")
                      
-
-
 map_crs <- "+proj=longlat +datum=WGS84"
 
 
@@ -106,7 +104,14 @@ zip_list <- unique(hosp$GEOID10)
 #' Hospitalization data (65+ rates)
 hosp65 <- read.csv("./Data/CHA Data/co_zip_65plus_rate_period.csv", header=T)
 hosp65 <- rename(hosp65, c("ZIP" = "GEOID10"))
-zip_list <- unique(hosp$GEOID10)
+
+#' Mortality data
+mort <- read.csv("./Data/VS Data/co_mortality_zip_rate_period.csv", header=T)
+mort <- rename(mort, c("ZIP" = "GEOID10"))
+
+#' Mortality data (30+ rates)
+mort30 <- read.csv("./Data/VS Data/co_mortality_zip_30plus_rate_period.csv", header=T)
+mort30 <- rename(mort30, c("ZIP" = "GEOID10"))
 
 #' Colors for cloropleth maps
 col_list <- c("#d7191c", "#fdae61", "#ffff66", "#abd9e9", "#2c7bb6")
@@ -326,6 +331,127 @@ print(res65_map)
 ggsave(res65_map, filename = "./Maps/Res Hospitalization Rates 65+.jpeg", 
        device = "jpeg", 
        dpi=400, width = 7, height = 6, units="in")
+
+#' =============================================================================
+#' Map the mortality rates
+#' =============================================================================
+
+sfr_zip <- sfr_zcta_map[which(sfr_zcta_map$GEOID10 %in% zip_list),]
+
+sfr_mort <- merge(sfr_zip, mort, by="GEOID10")
+
+sfr_mort$ac_breaks <- cut(sfr_mort$all_cause_per_10005y, 
+                          breaks=c(0,2.5,5,7.5,10,max(sfr_mort$all_cause_per_10005y)),
+                          include.lowest=T)
+sfr_mort$na_breaks <- cut(sfr_mort$non_accidental_per_1000p5y, 
+                           breaks=c(0,2.5,5,7.5,10,max(sfr_mort$non_accidental_per_1000p5y)),
+                           include.lowest=T)
+
+#' All-cause mortality per 1000 persons
+ac_map <- ggmap(base_map) +
+  ggtitle("All-cause mortality") +
+  geom_polygon(data=sfr_mort, aes(x=long, y=lat, 
+                                  group=group, fill=ac_breaks),
+               color=NA, show.legend = T, alpha=0.5) +
+  geom_polygon(data=sfr_zcta_map, aes(x=long, y=lat, group=group),
+               color="grey70", fill="NA", size=0.5) +
+  geom_polygon(data=sfr_counties_map, aes(x=long, y=lat, group=group),
+               color="black", fill="NA", size=1) +
+  geom_point(data=pp_df, aes(x=long, y=lat),
+             color="black", pch=17, cex=3) +
+  scale_fill_manual(name="All cause deaths\nper 1000 persons", 
+                    values=rev(col_list), na.value="grey50") +
+  xlab("") + ylab("") +
+  scale_bar + n_arrow + n_label +
+  theme(legend.position = "right") +
+  simple_theme2
+print(ac_map)
+ggsave(ac_map, filename = "./Maps/AC Mortality Rates.jpeg", device = "jpeg", 
+       dpi=400, width = 7, height = 6, units="in")
+
+#' Non-acciental mortality per 1000 persons
+na_map <- ggmap(base_map) +
+  ggtitle("Non-accidental mortality") +
+  geom_polygon(data=sfr_mort, aes(x=long, y=lat, 
+                                  group=group, fill=na_breaks),
+               color=NA, show.legend = T, alpha=0.5) +
+  geom_polygon(data=sfr_zcta_map, aes(x=long, y=lat, group=group),
+               color="grey70", fill="NA", size=0.5) +
+  geom_polygon(data=sfr_counties_map, aes(x=long, y=lat, group=group),
+               color="black", fill="NA", size=1) +
+  geom_point(data=pp_df, aes(x=long, y=lat),
+             color="black", pch=17, cex=3) +
+  scale_fill_manual(name="Non-accidental dealths\nper 1000 persons", 
+                    values=rev(col_list), na.value="grey50") +
+  xlab("") + ylab("") +
+  scale_bar + n_arrow + n_label +
+  theme(legend.position = "right") +
+  simple_theme2
+print(na_map)
+ggsave(na_map, filename = "./Maps/NA Mortality Rates.jpeg", device = "jpeg", 
+       dpi=400, width = 7, height = 6, units="in")
+
+#' =============================================================================
+#' Map the mortality rates (30+ only)
+#' =============================================================================
+
+sfr_zip <- sfr_zcta_map[which(sfr_zcta_map$GEOID10 %in% zip_list),]
+
+sfr_mort30 <- merge(sfr_zip, mort30, by="GEOID10")
+
+sfr_mort30$ac_breaks <- cut(sfr_mort30$all_cause_per_1000_30plus5y, 
+                          breaks=c(0,5,7.5,10,12.5,
+                                   max(sfr_mort30$all_cause_per_1000_30plus5y)),
+                          include.lowest=T)
+sfr_mort30$na_breaks <- cut(sfr_mort30$non_accidental_1000_30plus5y, 
+                          breaks=c(0,5,7.5,10,12.5,
+                                   max(sfr_mort30$non_accidental_1000_30plus5y)),
+                          include.lowest=T)
+
+#' All-cause mortality per 1000 persons
+ac30_map <- ggmap(base_map) +
+  ggtitle("All-cause mortality (adults 30 years and older)") +
+  geom_polygon(data=sfr_mort30, aes(x=long, y=lat, 
+                                  group=group, fill=ac_breaks),
+               color=NA, show.legend = T, alpha=0.5) +
+  geom_polygon(data=sfr_zcta_map, aes(x=long, y=lat, group=group),
+               color="grey70", fill="NA", size=0.5) +
+  geom_polygon(data=sfr_counties_map, aes(x=long, y=lat, group=group),
+               color="black", fill="NA", size=1) +
+  geom_point(data=pp_df, aes(x=long, y=lat),
+             color="black", pch=17, cex=3) +
+  scale_fill_manual(name="All cause deaths\nper 1000 persons 30+", 
+                    values=rev(col_list), na.value="grey50") +
+  xlab("") + ylab("") +
+  scale_bar + n_arrow + n_label +
+  theme(legend.position = "right") +
+  simple_theme2
+print(ac30_map)
+ggsave(ac30_map, filename = "./Maps/AC Mortality Rates 30+.jpeg", device = "jpeg", 
+       dpi=400, width = 7, height = 6, units="in")
+
+#' Non-acciental mortality per 1000 persons
+na30_map <- ggmap(base_map) +
+  ggtitle("Non-accidental mortality (adults 30 years and older)") +
+  geom_polygon(data=sfr_mort30, aes(x=long, y=lat, 
+                                  group=group, fill=na_breaks),
+               color=NA, show.legend = T, alpha=0.5) +
+  geom_polygon(data=sfr_zcta_map, aes(x=long, y=lat, group=group),
+               color="grey70", fill="NA", size=0.5) +
+  geom_polygon(data=sfr_counties_map, aes(x=long, y=lat, group=group),
+               color="black", fill="NA", size=1) +
+  geom_point(data=pp_df, aes(x=long, y=lat),
+             color="black", pch=17, cex=3) +
+  scale_fill_manual(name="Non-accidental dealths\nper 1000 persons 30+", 
+                    values=rev(col_list), na.value="grey50") +
+  xlab("") + ylab("") +
+  scale_bar + n_arrow + n_label +
+  theme(legend.position = "right") +
+  simple_theme2
+print(na30_map)
+ggsave(na30_map, filename = "./Maps/NA Mortality Rates 30+.jpeg", device = "jpeg", 
+       dpi=400, width = 7, height = 6, units="in")
+
 
 
 #' =============================================================================

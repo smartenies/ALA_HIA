@@ -95,7 +95,7 @@ co_mortality_zip <- co_mortality %>%
          # set NA cvd resp n to 0
          total_30plus5y = age_30plus*5,
          all_cause_per_1000_30plus5y = (all_cause_n/total_30plus5y)*1000,
-         non_accidental_per_1000_30plus5y = (non_accidental_n/total_30plus5y)*1000)
+         non_accidental_1000_30plus5y = (non_accidental_n/total_30plus5y)*1000)
 
 # save zip estimate file
 write_path <- "./Data/VS Data/co_mortality_zip_30plus_rate_period.csv"

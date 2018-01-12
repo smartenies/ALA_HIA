@@ -93,11 +93,11 @@ pop$p8_12 <- (pop$p5_9 * (2/5)) + (pop$p10_14 * (3/5))
 pop$p6_14 <- (pop$p5_9 * (4/5)) + pop$p10_14
 pop$p6_18 <- (pop$p5_9 * (4/5)) + pop$p10_14 + pop$p15_17 + (pop$p18_19 * (1/2))
 pop$p18_64 <- (pop$p18_19 + pop$p20 + pop$p21 + pop$p22_24 + pop$p25_29 
-                + pop$p30_34 + pop$p35_39 + pop$p40_44 + pop$p45_49 + pop$p50_54 + pop$p55_59
-                + pop$p60_61 + pop$p62_64)
-pop$p0_64 <- (pop$p0_17 + pop$p18_19 + pop$p20 + pop$p21 + pop$p22_24 + pop$p25_29 +
-              pop$p30_34 + pop$p35_39 + pop$p40_44 + pop$p45_49 + pop$p50_54 +
-              pop$p55_59 + pop$p60_61 + pop$p62_64)
+               + pop$p30_34 + pop$p35_39 + pop$p40_44 + pop$p45_49 + pop$p50_54 
+               + pop$p55_59 + pop$p60_61 + pop$p62_64)
+pop$p0_64 <- (pop$p0_17 + pop$p18_19 + pop$p20 + pop$p21 + pop$p22_24
+              + pop$p25_29 + pop$p30_34 + pop$p35_39 + pop$p40_44 
+              + pop$p45_49 + pop$p50_54 + pop$p55_59 + pop$p60_61 + pop$p62_64)
 pop$p60_64 <- pop$p60_61 + pop$p62_64
 pop$p65_69 <- pop$p65_66 + pop$p67_69
 pop$p65_99 <- pop$p65_69 + pop$p70_74 + pop$p75_79 + pop$p80_84 + pop$p85_99 
@@ -116,12 +116,14 @@ write.table(co_pop, "./HIA Inputs/population.txt", row.names=F)
 #' -----------------------------------------------------------------------------
 
 #' mortality
-mort <- read.csv("./Data/VS Data/co_mortality_zip_rate_period.csv", header=T)
-mort$mort_ac <- mort$all_cause_per_10005y / 1000 / 365
-mort$mort_na <- mort$non_accidental_per_1000p5y / 1000 / 365
+mort <- read.csv("./Data/VS Data/co_mortality_zip_30plus_rate_period.csv", 
+                 header=T, stringsAsFactors = F)
+mort$mort_ac <- mort$all_cause_per_1000_30plus5y / 1000 / 365
+mort$mort_na <- mort$all_cause_per_1000_30plus5y / 1000 / 365
 
 #' hosptializations for the 65+ population (from Ryan)
-hosp <- read.csv("./Data/CHA Data/co_zip_65plus_rate_period.csv", header=T)
+hosp <- read.csv("./Data/CHA Data/co_zip_65plus_rate_period.csv", 
+                 header=T, stringsAsFactors = F)
 
 #' calculate rates per person per day
 hosp$hosp_cp <- hosp$cardiopulm_per_100_65p5y / 100 / 365
@@ -143,10 +145,9 @@ morb2 <- morb2[-c(1),]
 morb2 <- morb2[rep(row.names(morb2), nrow(hosp)),]
 
 #' put them all together
-hosp2 <- hosp[,c("ZIP", "hosp_cp", "hosp_cvd", "hosp_res")]
-
-pppd <- mort[,c("ZIP", "mort_ac", "mort_na")]
-pppd <- merge(pppd, hosp2, by="ZIP")
+pppd <- hosp[,c("ZIP", "hosp_cp", "hosp_cvd", "hosp_res")]
+pppd <- merge(pppd, mort[,c("ZIP", "mort_ac", "mort_na")], 
+              by="ZIP", all=T)
 pppd <- cbind(pppd, morb2)
 
 rownames(pppd) <- seq(1:nrow(pppd))
