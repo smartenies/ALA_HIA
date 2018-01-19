@@ -1,6 +1,6 @@
 #' =============================================================================
 #' Project: American Lung Association HIA
-#' Date created: September 26, 2017
+#' Date created: January 19, 2018
 #' Author: Sheena Martenies
 #' Contact: Sheena.Martenies@colostate.edu
 #' 
@@ -11,7 +11,7 @@
 #' Martin Drake (in Colorado Springs, CO). The facilities are slated to be 
 #' decommissioned by 2025.
 #' 
-#' This script generates the exposure data for each ZCTA in the area
+#' This script summarized air pollution exposures at the ZCTA level
 #' =============================================================================
 
 library(foreign)
@@ -34,17 +34,21 @@ library(plyr)
 library(stringr)
 library(readxl)
 
-geo_data <- "C:/Users/semarten/Documents/Geodatabases"
-
-#' -----------------------------------------------------------------------------
-#' 
-#' -----------------------------------------------------------------------------
+#' =============================================================================
+#' Load cleaned CMAQ data
+#' =============================================================================
 
 
+#' =============================================================================
+#' Summarize the hourly data into daily and annual metrics
+#' =============================================================================
 
-#' -----------------------------------------------------------------------------
-#' Exposure metric functions
-#' -----------------------------------------------------------------------------
+
+
+
+
+
+
 
 #' Second, need to calculate the daily 8-hr max 
 #' (highest 8 h mean in the 24 h period)

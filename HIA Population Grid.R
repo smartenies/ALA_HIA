@@ -68,7 +68,7 @@ crs(zcta_r) <- proj4string(pop_den)
 zcta_r <- rasterize(zcta_p, zcta_r, field='GEOID_NUM')
 summary(zcta_r)
 
-plot(zcta_r,colNA="grey50")
+plot(zcta_r,colNA="black")
 plot(zcta_p, col=NA, border="blue", add=T)
 
 #' Check out how well the rasterization worked in GIS
@@ -85,8 +85,11 @@ zcta_grid <- cbind(zcta_grid, den_grid)
 names(zcta_grid@data) <- c("GEOID10", "pop_den")
 summary(zcta_grid)
 
+zcta_pts <- as(zcta_grid, "SpatialPointsDataFrame")
+summary(zcta_pts)
+
 plot(zcta_grid)
 plot(zcta_p, col=NA, border="blue", add=T)
 
-save(zcta_grid, file="./Data/Spatial Data/ZCTA grid.RData")
+save(zcta_grid, zcta_pts, file="./Data/Spatial Data/ZCTA grid.RData")
 
