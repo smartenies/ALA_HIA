@@ -43,6 +43,17 @@ zcta <- unique(as.character(co_zcta_utm$GEOID_Data))
 rm(co_zcta_utm, co_zcta_utm_map, co_zcta)
 
 #' -----------------------------------------------------------------------------
+#' load the values
+#' -----------------------------------------------------------------------------
+
+values$age_group <- gsub("-", "_", values$age_group)
+
+ages <- paste("p", unique(values$age_group), sep="")
+ages_se <- paste(age_groups, "_se", sep="")
+age_groups <- c("GEOID", "total", "total_se", age_groups, age_groups_se)
+age_groups <- age_groups[order(age_groups)]
+
+#' -----------------------------------------------------------------------------
 #' Creating the baseline rates database
 #' -----------------------------------------------------------------------------
 
@@ -86,6 +97,7 @@ morb_pppd <- reshape(morb_pppd, idvar = "ZIP",
                      timevar = c("outcome"),
                      direction = "wide")
 colnames(morb_pppd) <- gsub("pppd.", "", colnames(morb_pppd))
+morb_pppd$ZIP <- NULL
 
 morb_se <- morb[,c("ZIP", "outcome", "se")]
 morb_se <- reshape(morb_se, idvar = "ZIP",
@@ -93,9 +105,9 @@ morb_se <- reshape(morb_se, idvar = "ZIP",
                      direction = "wide")
 colnames(morb_se) <- gsub("se.", "", colnames(morb_se))
 colnames(morb_se)[-1] <- paste(colnames(morb_se)[-1], "_se", sep="")
+morb_se$ZIP <- NULL
 
 morb2 <- cbind(morb_pppd, morb_se)
-morb2$ZIP <- NULL
 morb2 <- morb2[,order(morb2)]
 
 morb2 <- morb2[rep(row.names(morb2), nrow(out_df)),]
@@ -114,8 +126,12 @@ write.table(pppd, "./HIA Inputs/rates.txt", row.names = F)
 #' -----------------------------------------------------------------------------
 
 load("./Data/Pooled CRs.RData")
+values <- read.table("./Data/Ages and Values.txt", header=T,
+                     stringsAsFactors = F)
+
 cr <- merge(pooled_crs, values, by="outcome")
 
-cr <- cr[,c("outcome", "pol", "age_group", "cr_beta", "cr_se", "value_2024")]
+cr <- cr[,c("outcome", "pol", "metric", "age_group", 
+            "cr_beta", "cr_se", "value_2024")]
 
 write.table(cr, "./HIA Inputs/CR.txt", row.names = F)
