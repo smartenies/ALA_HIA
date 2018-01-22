@@ -206,3 +206,4 @@ co_pop <- pop[,which(!(colnames(pop) %in% pop_cols))]
 co_pop$GEOID <- gsub("86000US", "", co_pop$GEOID)
 
 write.table(co_pop, "./HIA Inputs/population.txt", row.names=F)
+write.csv(co_pop, "./Data/ACS_2010_2014/co_populations.csv", row.names=F)

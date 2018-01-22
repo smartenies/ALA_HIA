@@ -2,6 +2,10 @@
 # Title: Estimating Colorado 2010-2014 period mortality rates by ZIP Codes
 # Author: Ryan Gan
 # Date Created: 2017-12-20
+#
+# Edited 2018-01-22 by SEM to include the SE for the rate
+# SE is calculated as count / sqrt(pop) (as in Woodward 2005, page 152)
+# Assumes rate follows the Poisson distribution
 # ------------------------------------------------------------------------------
 
 # library ----
@@ -10,7 +14,8 @@ library(tidyverse)
 # setup -----
 # read in mortality data -----
 # path to my colorado repo folder so I don't have to copy the file
-m_path <- "../colorado_wildfire/data/health/co_death_1016.csv"
+#m_path <- "../colorado_wildfire/data/health/co_death_1016.csv"
+m_path <- "./Data/VS Data/co_death_1016.csv"
 
 # ICD 10 A00-R00 for detecting non-accidental cause of death
 non_accidental_list <- LETTERS[1:18]
@@ -25,12 +30,19 @@ co_mortality <- read_csv(m_path) %>%
     ZIP = as.character(repzip))
   
 # read in populations ----
-zip_pop <- read_csv(paste0("../colorado_wildfire/data/shapefiles/",
-    "2014_ZCTA_Population/Populations_CO_ZCTA_2014.txt")) %>% 
-  select(ZCTA5CE10, B01001e1) %>% 
-  # need to only extract the last part of the GEOID to join 
-  rename(ZIP = ZCTA5CE10,
-         total_pop = B01001e1) %>% 
+# zip_pop <- read_csv(paste0("../colorado_wildfire/data/shapefiles/",
+#     "2014_ZCTA_Population/Populations_CO_ZCTA_2014.txt")) %>% 
+#   select(ZCTA5CE10, B01001e1) %>% 
+#   # need to only extract the last part of the GEOID to join 
+#   rename(ZIP = ZCTA5CE10,
+#          total_pop = B01001e1) %>% 
+#   mutate(ZIP = as.character(ZIP))
+
+zip_pop <- read_csv("./Data/ACS_2010_2014/co_populations.csv") %>%
+  select(GEOID, total) %>%
+  # need to only extract the last part of the GEOID to join
+  rename(ZIP = GEOID,
+         total_pop = total) %>%
   mutate(ZIP = as.character(ZIP))
 
 # calculate mortality rate by zipcode -----
@@ -50,7 +62,9 @@ co_mortality_zip <- co_mortality %>%
          # set NA cvd resp n to 0
          total_pop5y = total_pop*5,
          all_cause_per_10005y = (all_cause_n/total_pop5y)*1000,
-         non_accidental_per_1000p5y = (non_accidental_n/total_pop5y)*1000)
+         all_cause_per_10005y_se = (all_cause_n/sqrt(total_pop5y))*1000,
+         non_accidental_per_1000p5y = (non_accidental_n/total_pop5y)*1000,
+         non_accidental_per_1000p5y_se = (non_accidental_n/sqrt(total_pop5y))*1000)
 
 # save zip estimate file
 write_path <- "./Data/co_mortality_zip_rate_period.csv"

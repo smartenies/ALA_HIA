@@ -35,6 +35,14 @@ library(stringr)
 library(readxl)
 
 #' -----------------------------------------------------------------------------
+#' get the list of ZCTAs in Colorado
+#' -----------------------------------------------------------------------------
+co_zcta <- load("./Data/Spatial Data/co_zcta_utm_map.RData")
+zcta <- unique(as.character(co_zcta_utm$GEOID_Data))
+
+rm(co_zcta_utm, co_zcta_utm_map, co_zcta)
+
+#' -----------------------------------------------------------------------------
 #' Creating the baseline rates database
 #' -----------------------------------------------------------------------------
 
@@ -42,7 +50,12 @@ library(readxl)
 mort <- read.csv("./Data/VS Data/co_mortality_zip_30plus_rate_period.csv", 
                  header=T, stringsAsFactors = F)
 mort$mort_ac <- mort$all_cause_per_1000_30plus5y / 1000 / 365
+mort$mort_ac_se <- mort$all_cause_per_1000_30plus5y_se / 1000 / 365
 mort$mort_na <- mort$all_cause_per_1000_30plus5y / 1000 / 365
+mort$mort_na_se <- mort$all_cause_per_1000_30plus5y_se / 1000 / 365
+
+#' just pppd columns
+mort <- mort[,c(1, 10:13)]
 
 #' hosptializations for the 65+ population (from Ryan)
 hosp <- read.csv("./Data/CHA Data/co_zip_65plus_rate_period.csv", 
@@ -50,28 +63,45 @@ hosp <- read.csv("./Data/CHA Data/co_zip_65plus_rate_period.csv",
 
 #' calculate rates per person per day
 hosp$hosp_cp <- hosp$cardiopulm_per_100_65p5y / 100 / 365
+hosp$hosp_cp_se <- hosp$cardiopulm_per_100_65p5y_se / 100 / 365
 hosp$hosp_cvd <- hosp$cvd_per_100_65p5y / 100 / 365
+hosp$hosp_cvd_se <- hosp$cvd_per_100_65p5y_se / 100 / 365
 hosp$hosp_res <- hosp$resp_per_100_65p5y / 100 / 365
+hosp$hosp_res_se <- hosp$resp_per_100_65p5y_se / 100 / 365
+
+#' just pppd columns
+hosp <- hosp[,c(1, 13:18)]
+
+out_df <- merge(mort, hosp, by="ZIP", all=T)
 
 #' other morbitidies (See Ozone RIA 2015 and BenMAP user manual)
 #' minor_ast is mean of cough, sob, and wheeze
-morb <- data.frame(outcome = c("ed_ast", "hosp_mi", "minor_astc", "minor_asts",
-                               "minor_astw", "minor_ast", "minor_mrad", "minor_sld", 
-                               "minor_wld", "minor_lrs", "ac_bronchitis"),
-                   pppd = c(.959/100/365, NA, 0.067, 0.037, 
-                            0.076, 0.067, 0.02137, 9.9/180, 
-                            0.0057, 0.0012, 0.043/365))
-outcomes <- unique(as.character(morb$outcome))
-morb2 <- as.data.frame(t(morb))
-colnames(morb2) <- outcomes
-morb2 <- morb2[-c(1),]
-morb2 <- morb2[rep(row.names(morb2), nrow(hosp)),]
+morb <- read.csv("./Data/Other Health Data/Other Morbidity Rates.csv",
+                 header=T, stringsAsFactors = F)
+outcomes <- c(unique(as.character(morb$outcome)),
+              paste(unique(as.character(morb$outcome)), "_se", sep=""))
+
+morb_pppd <- morb[,c("ZIP", "outcome", "pppd")]
+morb_pppd <- reshape(morb_pppd, idvar = "ZIP",
+                     timevar = c("outcome"),
+                     direction = "wide")
+colnames(morb_pppd) <- gsub("pppd.", "", colnames(morb_pppd))
+
+morb_se <- morb[,c("ZIP", "outcome", "se")]
+morb_se <- reshape(morb_se, idvar = "ZIP",
+                     timevar = c("outcome"),
+                     direction = "wide")
+colnames(morb_se) <- gsub("se.", "", colnames(morb_se))
+colnames(morb_se)[-1] <- paste(colnames(morb_se)[-1], "_se", sep="")
+
+morb2 <- cbind(morb_pppd, morb_se)
+morb2$ZIP <- NULL
+morb2 <- morb2[,order(morb2)]
+
+morb2 <- morb2[rep(row.names(morb2), nrow(out_df)),]
 
 #' put them all together
-pppd <- hosp[,c("ZIP", "hosp_cp", "hosp_cvd", "hosp_res")]
-pppd <- merge(pppd, mort[,c("ZIP", "mort_ac", "mort_na")], 
-              by="ZIP", all=T)
-pppd <- cbind(pppd, morb2)
+pppd <- cbind(out_df, morb2)
 
 rownames(pppd) <- seq(1:nrow(pppd))
 

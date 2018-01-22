@@ -2,6 +2,10 @@
 # Title: Estimating Colorado 2010-2014 period ED rates in ZIP Codes
 # Author: Ryan Gan
 # Date Created: 2017-12-6
+# 
+# Edited 2018-01-22 by SEM to include the SE for the rate
+# SE is calculated as count / sqrt(pop) (as in Woodward 2005, page 152)
+# Assumes rate follows the Poisson distribution
 # ------------------------------------------------------------------------------
 
 # library ----
@@ -10,7 +14,9 @@ library(tidyverse)
 # setup -----
 # read in the dataframe with outcomes 
 # path to my colorado repo folder so I don't have to copy the file
-hosp_path <- "../colorado_wildfire/data/health/co_hosp_w_outcome_df.csv"
+#hosp_path <- "../colorado_wildfire/data/health/co_hosp_w_outcome_df.csv"
+hosp_path <- "./Data/CHA Data/co_hosp_w_outcome_df.csv"
+
 
 # read file and create some variables -----
 co_hosp <- read_csv(hosp_path) %>% 
@@ -34,13 +40,15 @@ co_hosp <- read_csv(hosp_path) %>%
   filter(!is.na(WRFGRID_ID))
 
 # read in populations ----
-zip_pop <- read_csv(paste0("../colorado_wildfire/data/shapefiles/",
-  "2014_ZCTA_Population/Populations_CO_ZCTA_2014.txt")) %>% 
-  select(ZCTA5CE10, B01001e1) %>% 
-  # need to only extract the last part of the GEOID to join 
-  rename(ZIP = ZCTA5CE10,
-         total_pop = B01001e1) %>% 
+# zip_pop <- read_csv(paste0("../colorado_wildfire/data/shapefiles/",
+#   "2014_ZCTA_Population/Populations_CO_ZCTA_2014.txt")) %>%
+zip_pop <- read_csv("./Data/ACS_2010_2014/co_populations.csv") %>%
+  select(GEOID, total) %>%
+  # need to only extract the last part of the GEOID to join
+  rename(ZIP = GEOID,
+         total_pop = total) %>%
   mutate(ZIP = as.character(ZIP))
+
 
 # calculate rate by zipcode -----
 zip_rate_period <- co_hosp %>% 
@@ -60,8 +68,11 @@ zip_rate_period <- co_hosp %>%
          cardiopulm_n = cvd_n + resp_n,
          total_pop5y = total_pop*5,
          cardiopulm_per_100p5y = (cardiopulm_n/total_pop5y)*100,
+         cardiopulm_per_100p5y_se = (cardiopulm_n/sqrt(total_pop5y))*100,
          cvd_per_100p5y = (cvd_n/total_pop5y)*100,
-         resp_per_100p5y = (resp_n/total_pop5y)*100)
+         cvd_per_100p5y_se = (cvd_n/sqrt(total_pop5y))*100,
+         resp_per_100p5y = (resp_n/total_pop5y)*100,
+         resp_per_100p5y_se = (resp_n/sqrt(total_pop5y))*100)
 
 # save zip estimate file
 write_path <- "./Data/co_zip_rate_period.csv"

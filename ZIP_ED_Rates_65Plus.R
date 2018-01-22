@@ -4,6 +4,9 @@
 # Date Created: 2017-12-6
 # 
 # Modified 12-9-17 by SEM to subset data by age (>= 65 years)
+# Edited 2018-01-22 by SEM to include the SE for the rate
+# SE is calculated as count / sqrt(pop) (as in Woodward 2005, page 152)
+# Assumes rate follows the Poisson distribution
 # ------------------------------------------------------------------------------
 
 # library ----
@@ -33,33 +36,10 @@ co_hosp <- read_csv("./Data/CHA Data/co_hosp_w_outcome_df.csv") %>%
 
 
 # read in populations ----
-zip_pop <- read_csv("./Data/5-year Populations/Populations_CO_ZCTA_2014.txt") %>% 
-    #'  B01001e20    Male population 65-66
-    #'  B01001e21    Male population 67-69
-    #'  B01001e22    Male population 70-74
-    #'  B01001e23    Male population 75-79
-    #'  B01001e24    Male population 80-84
-    #'  B01001e25    Male populiation 85+
-    #'  B01001e44    Female population 65-66
-    #'  B01001e45    Female population 67-69
-    #'  B01001e46    Female population 70-74
-    #'  B01001e47    Female population 75-79
-    #'  B01001e48    Female population 80-84
-    #'  B01001e49    Female populiation 85+
-  select(ZCTA5CE10, B01001e1, 
-         B01001e20, B01001e21, B01001e22, B01001e23, B01001e24, 
-         B01001e25, 
-         B01001e44, B01001e45, B01001e46, B01001e47, B01001e48,
-         B01001e49) %>%
-  mutate(age_65plus = (B01001e20 + B01001e21 + B01001e22 + B01001e23 + 
-                       B01001e24 + B01001e25 + 
-                         
-                       B01001e44 + B01001e45 + B01001e46 + B01001e47 + 
-                       B01001e48 + B01001e49)) %>%
-  # need to only extract the last part of the GEOID to join 
-  select(ZCTA5CE10, B01001e1, age_65plus) %>%
-  rename(ZIP = ZCTA5CE10,
-         total_pop = B01001e1) %>% 
+zip_pop <- read_csv("./Data/ACS_2010_2014/co_populations.csv") %>%
+  select(GEOID, p65_99) %>%
+  # need to only extract the last part of the GEOID to join
+  rename(ZIP = GEOID) %>%
   mutate(ZIP = as.character(ZIP))
 
 # calculate rate by zipcode -----
@@ -72,23 +52,19 @@ zip_rate_period <- co_hosp %>%
   # join with census denom
   right_join(zip_pop, by = "ZIP") %>% 
   # removing zip codes with 0 population
-  filter(total_pop != 0) %>% 
+  filter(p65_99 != 0) %>% 
   # calculate rate 
   mutate(cvd_n = ifelse(is.na(cvd_n), 0, cvd_n),
          resp_n = ifelse(is.na(resp_n), 0, resp_n),
          # set NA cvd resp n to 0
          cardiopulm_n = cvd_n + resp_n,
-         total_pop5y = total_pop*5,
-         total_65pop5y = age_65plus*5,
-         # cardiopulm_per_100p5y = (cardiopulm_n/total_pop5y)*100,
-         # cvd_per_100p5y = (cvd_n/total_pop5y)*100,
-         # resp_per_100p5y = (resp_n/total_pop5y)*100,
-         cardiopulm_per_100_65p5y = ifelse(total_65pop5y==0, NA,
-                                           (cardiopulm_n/total_65pop5y)*100),
-         cvd_per_100_65p5y = ifelse(total_65pop5y==0, NA,
-                                    (cvd_n/total_65pop5y)*100),
-         resp_per_100_65p5y = ifelse(total_65pop5y==0, NA,
-                                     (resp_n/total_65pop5y)*100))
+         p65pop5y = p65_99*5,
+         cardiopulm_per_100_65p5y = (cardiopulm_n/p65pop5y)*100,
+         cardiopulm_per_100_65p5y_se = (cardiopulm_n/sqrt(p65pop5y))*100,
+         cvd_per_100_65p5y = (cvd_n/p65pop5y*100),
+         cvd_per_100_65p5y_se = (cvd_n/sqrt(p65pop5y))*100,
+         resp_per_100_65p5y = (resp_n/p65pop5y)*100,
+         resp_per_100_65p5y_se = (resp_n/sqrt(p65pop5y))*100)
 
 # save zip estimate file
 write_path <- "./Data/CHA Data/co_zip_65plus_rate_period.csv"
