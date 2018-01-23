@@ -48,10 +48,13 @@ exp_file <- "Test CMAQ Data.RData"
 #' Health and Population Data:
 inp_path <- "./HIA Inputs/"
 cr_file <- "CR.txt"
+pop_file <- "populations.txt"
+rate_rile <- "rates.txt"
 #' -----------------------------------------------------------------------------
 
 #' -----------------------------------------------------------------------------
 #' Outputs:
+out_path <- "./HIA Outputs/"
 
 #' -----------------------------------------------------------------------------
 
