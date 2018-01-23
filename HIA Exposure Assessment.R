@@ -35,15 +35,70 @@ library(stringr)
 library(readxl)
 
 #' =============================================================================
-#' Load cleaned CMAQ data
+#' Cleaning CMAQ data and summarizing to the metrics we want for the HIA:
+#'     Annual average
+#'     Daily average
+#'     Daily 1 hour max
+#'     Daily 8 hour max
 #' =============================================================================
 
+load("./Data/Spatial Data/ZCTA grid.RData")
+
+#' For now, using dummy CMAQ data-- will need to reconcile this code later
+#' Making a raster with the same spatial resolution as the population density
+#' grid for now
+#' WILL NEED TO MAKE SURE HTE CMAQ OUTPUT AND POPULATION DENSITY DATA MATCH
+#' IF NOT-- WILL NEED TO ADJUST POP DENSITY GRID AND THEN REDO THE ZCTA GRID
+
+n <- nrow(zcta_grid) 
+reps <- 24*5 #how many hours do I want to simulate
+cmaq_pm <- matrix(sample(5:15, n*reps, replace=TRUE), ncol=reps)
+cmaq_o3 <- matrix(sample(50:80, n*reps, replace=TRUE), ncol=reps)
+
+rm(n, reps, zcta_grid, zcta_pts)
 
 #' =============================================================================
 #' Summarize the hourly data into daily and annual metrics
 #' =============================================================================
 
+#' function for daily metrics
+daily_met <- function(mat, hrs = 24, fun) {
+   days <- ncol(mat) / hrs
+   f_mat <- matrix(nrow=(nrow(mat)))
+   
+   for (day in 1:days) {
+     d_mat <- mat[,((day*hrs)-(hrs-1)):(day*hrs)]
+     temp <- as.matrix(apply(d_mat, 1, fun))
+     f_mat <- cbind(f_mat, temp) 
+   }
+   return(f_mat[,-1])
+}
 
+#' function for 8 h daily max (Based on the ozone NAAQS)
+
+
+#' Check dimentions of the CMAQ matrix
+dim(cmaq_pm)
+dim(cmaq_o3)
+#' 405002 receptors and 48 hours
+
+#' all of the cmaq outputs we want to calculate metrics for
+cmaq_list <- list(cmaq_pm, cmaq_o3)
+cmaq_name <- c("pm", "o3")
+
+for (i in 1:length(cmaq_list)) {
+  # ID the first matrix
+  cmaq <- cmaq_list[[i]]
+  name <- cmaq_name[i]
+  
+  #' annual mean
+  ann_mean <- as.matrix(rowMeans(cmaq))
+  
+  #' daily means
+  d24h_mean <- daily_met(mat = cmaq, fun = mean)
+
+  
+}
 
 
 

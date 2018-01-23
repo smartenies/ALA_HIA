@@ -181,7 +181,7 @@ rma_model2 <- rma(yi = cr, sei = se, data=pm_ast_cr2)
 
 #' add final beta and se to the pooled CR dataset
 pooled_crs[nrow(pooled_crs)+1,1] <- "PM2.5"
-pooled_crs[nrow(pooled_crs),2] <- "24 h mean"
+pooled_crs[nrow(pooled_crs),2] <- "d24h_mean"
 pooled_crs[nrow(pooled_crs),3] <- "minor_ast"
 pooled_crs[nrow(pooled_crs),4] <- 2
 pooled_crs[nrow(pooled_crs),5] <- rma_model2$beta[,1]
