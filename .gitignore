@@ -5,6 +5,8 @@
 /BenMAP Materials
 /Data
 /FRESHEST Code
+/HIA Inputs
+/HIA Outputs
 /Manuscript
 /Maps
 /Spreadsheets
@@ -13,4 +15,5 @@
 # ignore image
 *.pdf
 *.tiff
+*.jpeg
 

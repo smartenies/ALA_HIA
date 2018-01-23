@@ -42,6 +42,12 @@ library(readxl)
 #'     Daily 8 hour max
 #' =============================================================================
 
+#' -----------------------------------------------------------------------------
+#' Designate the file name for this run (TO BE MOVED TO THE MASTER SCRIPT)
+exp_path <- "./HIA Inputs/Exposures/"
+exp_file <- "Test CMAQ Data"
+#' -----------------------------------------------------------------------------
+
 load("./Data/Spatial Data/ZCTA grid.RData")
 
 #' For now, using dummy CMAQ data-- will need to reconcile this code later
@@ -52,18 +58,32 @@ load("./Data/Spatial Data/ZCTA grid.RData")
 
 n <- nrow(zcta_grid) 
 reps <- 24*5 #how many hours do I want to simulate
-cmaq_pm <- matrix(sample(5:15, n*reps, replace=TRUE), ncol=reps)
+cmaq_pm2.5 <- matrix(sample(5:15, n*reps, replace=TRUE), ncol=reps)
 cmaq_o3 <- matrix(sample(50:80, n*reps, replace=TRUE), ncol=reps)
 
 rm(n, reps, zcta_grid, zcta_pts)
+
+#' Check dimentions of the CMAQ matrix
+dim(cmaq_pm2.5)
+dim(cmaq_o3)
+#' 405002 receptors and 48 hours
+
+#' all of the cmaq outputs we want to calculate metrics for need to be in
+#' a list
+cmaq_list <- list(cmaq_pm2.5, cmaq_o3)
+names(cmaq_list) <- c("PM2.5", "O3")
+
+rm(cmaq_pm2.5, cmaq_o3)
 
 #' =============================================================================
 #' Summarize the hourly data into daily and annual metrics
 #' =============================================================================
 
 #' function for daily metrics
-daily_met <- function(mat, hrs = 24, fun) {
+daily_exp <- function(mat, hrs = 24, fun) {
+   try(if(ncol(mat)%%hrs != 0) stop("Error: number of columns in matrix not divisible by hrs"))
    days <- ncol(mat) / hrs
+  
    f_mat <- matrix(nrow=(nrow(mat)))
    
    for (day in 1:days) {
@@ -74,32 +94,44 @@ daily_met <- function(mat, hrs = 24, fun) {
    return(f_mat[,-1])
 }
 
+#' Testing out the daily function
+# test_m <- matrix(c(rep(1, times=24), rep(2, times=24)), ncol=48)
+# test_m <- rbind(test_m, test_m, test_m)
+# daily_m <- daily_met(mat=test_m, hrs=24, fun = mean)
+
 #' function for 8 h daily max (Based on the ozone NAAQS)
 
 
-#' Check dimentions of the CMAQ matrix
-dim(cmaq_pm)
-dim(cmaq_o3)
-#' 405002 receptors and 48 hours
 
-#' all of the cmaq outputs we want to calculate metrics for
-cmaq_list <- list(cmaq_pm, cmaq_o3)
-cmaq_name <- c("pm", "o3")
 
+#' -----------------------------------------------------------------------------
+#' Calculate annual and daily metrics for each receptor
 for (i in 1:length(cmaq_list)) {
   # ID the first matrix
   cmaq <- cmaq_list[[i]]
-  name <- cmaq_name[i]
+  name <- names(cmaq_list)[i]
   
   #' annual mean
   ann_mean <- as.matrix(rowMeans(cmaq))
   
   #' daily means
-  d24h_mean <- daily_met(mat = cmaq, fun = mean)
-
+  d24h_mean <- daily_exp(mat = cmaq, fun = mean)
   
+  #' daily 1-hour max
+  d1h_max <- daily_exp(mat = cmaq, fun = max)
+  
+  #' daily 8-hour max (O3; not used in PM2.5 HIFs)
+  d8h_max <- d1h_max
+  #d8h_max <- daily_exp(mat = cmaq, fum = d8h_m)
+  
+  exp_list <- list(ann_mean, d24h_mean, d1h_max, d8h_max)
+  names(exp_list) <- paste(name, 
+                           c("ann_mean", "d24h_mean", "d1h_max", "d8h_max"),
+                           sep="_")
+  save(exp_list, file=paste(exp_path, exp_file, " ", name, ".RData", sep=""))
+  rm(exp_list, ann_mean, d24h_mean, d1h_max, d8h_max, cmaq)
 }
-
+#' -----------------------------------------------------------------------------
 
 
 
