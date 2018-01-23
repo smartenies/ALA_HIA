@@ -11,7 +11,7 @@
 #' Martin Drake (in Colorado Springs, CO). The facilities are slated to be 
 #' decommissioned by 2025.
 #' 
-#' This script summarized air pollution exposures at the ZCTA level
+#' This script summarizes air pollution exposures at the ZCTA level
 #' =============================================================================
 
 library(foreign)
@@ -45,7 +45,7 @@ library(readxl)
 #' -----------------------------------------------------------------------------
 #' Designate the file name for this run (TO BE MOVED TO THE MASTER SCRIPT)
 exp_path <- "./HIA Inputs/Exposures/"
-exp_file <- "Test CMAQ Data"
+exp_file <- "Test CMAQ Data.RData"
 #' -----------------------------------------------------------------------------
 
 load("./Data/Spatial Data/ZCTA grid.RData")
@@ -128,7 +128,7 @@ for (i in 1:length(cmaq_list)) {
   names(exp_list) <- paste(name, 
                            c("ann_mean", "d24h_mean", "d1h_max", "d8h_max"),
                            sep="_")
-  save(exp_list, file=paste(exp_path, exp_file, " ", name, ".RData", sep=""))
+  save(exp_list, file=paste(exp_path, name, " ", exp_file, sep=""))
   rm(exp_list, ann_mean, d24h_mean, d1h_max, d8h_max, cmaq)
 }
 #' -----------------------------------------------------------------------------
