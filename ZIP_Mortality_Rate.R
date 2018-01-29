@@ -66,8 +66,34 @@ co_mortality_zip <- co_mortality %>%
          non_accidental_per_1000p5y = (non_accidental_n/total_pop5y)*1000,
          non_accidental_per_1000p5y_se = (non_accidental_n/sqrt(total_pop5y))*1000)
 
+hist(co_mortality_zip$all_cause_n)
+test <- co_mortality_zip[1,]
+
+get_rate <- function(data, ct, pop, per=1000) {
+  mod <- glm(ct ~ 1, offset=log(pop), family=poisson, data=data)
+  rate <- exp(mod$coefficients[1]) * per
+  se <- exp(coef(summary(mod))[1,2]) * per
+  return(rate)
+}
+
+get_rate_se <- function(data, ct, pop, per=1000) {
+  mod <- glm(ct ~ 1, offset=log(pop), family=poisson, data=data)
+  rate <- exp(mod$coefficients[1]) * per
+  se <- exp(coef(summary(mod))[1,2]) * per
+  return(se)
+}
+
+test_rate <- get_rate(data=test, ct=test$all_cause_n, pop=test$total_pop5y)
+test_se <- get_rate_se(data=test, ct=test$all_cause_n, pop=test$total_pop5y)
+
+#' test rate is the same as the data set
+#' test SE is half what it is in the data set using the crude measure
+
 # save zip estimate file
 write_path <- "./Data/co_mortality_zip_rate_period.csv"
 write_csv(co_mortality_zip, write_path)
+
+
+
 
 
