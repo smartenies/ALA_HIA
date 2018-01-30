@@ -49,10 +49,10 @@ rm(co_zcta_utm, co_zcta_utm_map, co_zcta)
 #' mortality
 mort <- read.csv("./Data/VS Data/co_mortality_zip_30plus_rate_period.csv", 
                  header=T, stringsAsFactors = F)
-mort$mort_ac <- mort$all_cause_per_1000_30plus5y / 1000 / 365
-mort$mort_ac_se <- mort$all_cause_per_1000_30plus5y_se / 1000 / 365
-mort$mort_na <- mort$all_cause_per_1000_30plus5y / 1000 / 365
-mort$mort_na_se <- mort$all_cause_per_1000_30plus5y_se / 1000 / 365
+mort$mort_ac <- mort$ac_per_1000_30plus5y / 1000 / 365
+mort$mort_ac_se <- mort$ac_per_1000_30plus5y_se / 1000 / 365
+mort$mort_na <- mort$na_per_1000_30plus5y / 1000 / 365
+mort$mort_na_se <- mort$na_per_1000_30plus5y_se / 1000 / 365
 
 #' just pppd columns
 mort <- mort[,c(1, 10:13)]
@@ -62,12 +62,12 @@ hosp <- read.csv("./Data/CHA Data/co_zip_65plus_rate_period.csv",
                  header=T, stringsAsFactors = F)
 
 #' calculate rates per person per day
-hosp$hosp_cp <- hosp$cardiopulm_per_100_65p5y / 100 / 365
-hosp$hosp_cp_se <- hosp$cardiopulm_per_100_65p5y_se / 100 / 365
-hosp$hosp_cvd <- hosp$cvd_per_100_65p5y / 100 / 365
-hosp$hosp_cvd_se <- hosp$cvd_per_100_65p5y_se / 100 / 365
-hosp$hosp_res <- hosp$resp_per_100_65p5y / 100 / 365
-hosp$hosp_res_se <- hosp$resp_per_100_65p5y_se / 100 / 365
+hosp$hosp_cp <- hosp$cp_per_100_65plus5y / 100 / 365
+hosp$hosp_cp_se <- hosp$cp_per_100_65plus5y_se / 100 / 365
+hosp$hosp_cvd <- hosp$cvd_per_100_65plus5y / 100 / 365
+hosp$hosp_cvd_se <- hosp$cvd_per_100_65plus5y_se / 100 / 365
+hosp$hosp_res <- hosp$res_per_100_65plus5y / 100 / 365
+hosp$hosp_res_se <- hosp$res_per_100_65plus5y_se / 100 / 365
 
 #' just pppd columns
 hosp <- hosp[,c(1, 13:18)]
@@ -113,6 +113,9 @@ write.table(pppd, "./HIA Inputs/rates.txt", row.names = F)
 #' -----------------------------------------------------------------------------
 #' Creating the outcome database-- CR (SE), age-group, and monetized value
 #' -----------------------------------------------------------------------------
+
+load("./Data/Pooled CRs.RData")
+pooled_crs <- pooled_crs[order(pooled_crs$pol, pooled_crs$metric),]
 
 values <- read.table("./Data/Ages and Values.txt", header=T,
                      stringsAsFactors = F)
