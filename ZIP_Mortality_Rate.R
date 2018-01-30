@@ -6,6 +6,10 @@
 # Edited 2018-01-22 by SEM to include the SE for the rate
 # SE is calculated as count / sqrt(pop) (as in Woodward 2005, page 152)
 # Assumes rate follows the Poisson distribution
+#
+# Edited 2018-01-30 to use Poisson regression to caluclate rates and standard 
+# errors. Method above gave HUGE errors on the rates... still need to see if
+# this is the right way to do things
 # ------------------------------------------------------------------------------
 
 # library ----
@@ -60,34 +64,42 @@ co_mortality_zip <- co_mortality %>%
   mutate(all_cause_n = ifelse(is.na(all_cause_n),0,all_cause_n),
          non_accidental_n = ifelse(is.na(non_accidental_n),0,non_accidental_n),
          # set NA cvd resp n to 0
-         total_pop5y = total_pop*5,
-         all_cause_per_10005y = (all_cause_n/total_pop5y)*1000,
-         all_cause_per_10005y_se = (all_cause_n/sqrt(total_pop5y))*1000,
-         non_accidental_per_1000p5y = (non_accidental_n/total_pop5y)*1000,
-         non_accidental_per_1000p5y_se = (non_accidental_n/sqrt(total_pop5y))*1000)
+         total_pop5y = total_pop*5)#,
+         # all_cause_per_10005y = (all_cause_n/total_pop5y)*1000,
+         # non_accidental_per_1000p5y = (non_accidental_n/total_pop5y)*1000)
 
-hist(co_mortality_zip$all_cause_n)
-test <- co_mortality_zip[1,]
-
-get_rate <- function(data, ct, pop, per=1000) {
-  mod <- glm(ct ~ 1, offset=log(pop), family=poisson, data=data)
-  rate <- exp(mod$coefficients[1]) * per
-  se <- exp(coef(summary(mod))[1,2]) * per
-  return(rate)
+#' use Poisson regression to calculate rates and standard errors
+for (i in 1:nrow(co_mortality_zip)) {
+  df <- co_mortality_zip[i,]
+  ac_mod <- glm(all_cause_n ~ 1, offset=log(total_pop5y/1000), 
+                family=poisson, data=df)
+  co_mortality_zip[i,"ac_per_1000_5y"] <- exp(coef(summary(ac_mod))[1,1])
+  co_mortality_zip[i,"ac_per_1000_5y_se"] <- exp(coef(summary(ac_mod))[1,2])
+  
+  na_mod <- glm(non_accidental_n ~ 1, offset=log(total_pop5y/1000), 
+                family=poisson, data=df)
+  co_mortality_zip[i,"na_per_1000_5y"] <- exp(coef(summary(na_mod))[1,1])
+  co_mortality_zip[i,"na_per_1000_5y_se"] <- exp(coef(summary(na_mod))[1,2])
 }
 
-get_rate_se <- function(data, ct, pop, per=1000) {
-  mod <- glm(ct ~ 1, offset=log(pop), family=poisson, data=data)
-  rate <- exp(mod$coefficients[1]) * per
-  se <- exp(coef(summary(mod))[1,2]) * per
-  return(se)
-}
+# # functions for calculating rates and standard error 
+# get_rate <- function(data, ct, pop, per=1000) {
+#   mod <- glm(ct ~ 1, offset=log(pop/per), family=poisson, data=data)
+#   rate <- exp(coef(summary(mod))[1,1])
+#   se <- exp(coef(summary(mod))[1,2])
+#   return(rate)
+# }
+# 
+# get_rate_se <- function(data, ct, pop, per=1000) {
+#   mod <- glm(ct ~ 1, offset=log(pop/per), family=poisson, data=data)
+#   rate <- exp(coef(summary(mod))[1,1])
+#   se <- exp(coef(summary(mod))[1,2])
+#   return(se)
+# }  
 
-test_rate <- get_rate(data=test, ct=test$all_cause_n, pop=test$total_pop5y)
-test_se <- get_rate_se(data=test, ct=test$all_cause_n, pop=test$total_pop5y)
-
-#' test rate is the same as the data set
-#' test SE is half what it is in the data set using the crude measure
+# test <- co_mortality_zip[1,]
+# test_rate <- get_rate(data=test, ct=test$all_cause_n, pop=test$total_pop5y)
+# test_se <- get_rate_se(data=test, ct=test$all_cause_n, pop=test$total_pop5y)
 
 # save zip estimate file
 write_path <- "./Data/co_mortality_zip_rate_period.csv"

@@ -6,6 +6,10 @@
 # Edited 2018-01-22 by SEM to include the SE for the rate
 # SE is calculated as count / sqrt(pop) (as in Woodward 2005, page 152)
 # Assumes rate follows the Poisson distribution
+#
+# Edited 2018-01-30 to use Poisson regression to caluclate rates and standard 
+# errors. Method above gave HUGE errors on the rates... still need to see if
+# this is the right way to do things
 # ------------------------------------------------------------------------------
 
 # library ----
@@ -66,13 +70,32 @@ zip_rate_period <- co_hosp %>%
          resp_n = ifelse(is.na(resp_n), 0, resp_n),
          # set NA cvd resp n to 0
          cardiopulm_n = cvd_n + resp_n,
-         total_pop5y = total_pop*5,
-         cardiopulm_per_100p5y = (cardiopulm_n/total_pop5y)*100,
-         cardiopulm_per_100p5y_se = (cardiopulm_n/sqrt(total_pop5y))*100,
-         cvd_per_100p5y = (cvd_n/total_pop5y)*100,
-         cvd_per_100p5y_se = (cvd_n/sqrt(total_pop5y))*100,
-         resp_per_100p5y = (resp_n/total_pop5y)*100,
-         resp_per_100p5y_se = (resp_n/sqrt(total_pop5y))*100)
+         total_pop5y = total_pop*5)#,
+         # cardiopulm_per_100p5y = (cardiopulm_n/total_pop5y)*100,
+         # cardiopulm_per_100p5y = (cardiopulm_n/sqrt(total_pop5y))*100,
+         # cvd_per_100p5y = (cvd_n/total_pop5y)*100,
+         # cvd_per_100p5y_se = (cvd_n/sqrt(total_pop5y))*100,
+         # resp_per_100p5y = (resp_n/total_pop5y)*100,
+         # resp_per_100p5y_se = (resp_n/sqrt(total_pop5y))*100)
+
+#' use Poisson regression to calculate rates and standard errors
+for (i in 1:nrow(zip_rate_period)) {
+  df <- zip_rate_period[i,]
+  cp_mod <- glm(cardiopulm_n ~ 1, offset=log(total_pop5y/1000), 
+                family=poisson, data=df)
+  zip_rate_period[i,"cp_per_100_5y"] <- exp(coef(summary(cp_mod))[1,1])
+  zip_rate_period[i,"cp_per_100_5y_se"] <- exp(coef(summary(cp_mod))[1,2])
+  
+  cv_mod <- glm(cvd_n ~ 1, offset=log(total_pop5y/1000), 
+                family=poisson, data=df)
+  zip_rate_period[i,"cvd_per_100_5y"] <- exp(coef(summary(cv_mod))[1,1])
+  zip_rate_period[i,"cvd_per_100_5y_se"] <- exp(coef(summary(cv_mod))[1,2])
+  
+  res_mod <- glm(resp_n ~ 1, offset=log(total_pop5y/1000), 
+                family=poisson, data=df)
+  zip_rate_period[i,"res_per_100_5y"] <- exp(coef(summary(res_mod))[1,1])
+  zip_rate_period[i,"res_per_100_5y_se"] <- exp(coef(summary(res_mod))[1,2])
+}
 
 # save zip estimate file
 write_path <- "./Data/co_zip_rate_period.csv"

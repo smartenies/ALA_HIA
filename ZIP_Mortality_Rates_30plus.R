@@ -7,6 +7,10 @@
 # Edited 2018-01-22 by SEM to include the SE for the rate
 # SE is calculated as count / sqrt(pop) (as in Woodward 2005, page 152)
 # Assumes rate follows the Poisson distribution
+#
+# Edited 2018-01-30 to use Poisson regression to caluclate rates and standard 
+# errors. Method above gave HUGE errors on the rates... still need to see if
+# this is the right way to do things
 # ------------------------------------------------------------------------------
 
 # library ----
@@ -51,11 +55,25 @@ co_mortality_zip <- co_mortality %>%
   mutate(all_cause_n = ifelse(is.na(all_cause_n),0,all_cause_n),
          non_accidental_n = ifelse(is.na(non_accidental_n),0, non_accidental_n),
          # set NA cvd resp n to 0
-         p30plus5yr = p30_99*5,
-         all_cause_per_1000_30plus5y = (all_cause_n/p30plus5yr)*1000,
-         all_cause_per_1000_30plus5y_se = (all_cause_n/sqrt(p30plus5yr))*1000,
-         non_accidental_1000_30plus5y = (non_accidental_n/p30plus5yr)*1000,
-         non_accidental_1000_30plus5y_se = (non_accidental_n/sqrt(p30plus5yr))*1000)
+         p30plus5yr = p30_99*5)#,
+         # all_cause_per_1000_30plus5y = (all_cause_n/p30plus5yr)*1000,
+         # all_cause_per_1000_30plus5y_se = (all_cause_n/sqrt(p30plus5yr))*1000,
+         # non_accidental_1000_30plus5y = (non_accidental_n/p30plus5yr)*1000,
+         # non_accidental_1000_30plus5y_se = (non_accidental_n/sqrt(p30plus5yr))*1000)
+
+#' use Poisson regression to calculate rates and standard errors
+for (i in 1:nrow(co_mortality_zip)) {
+  df <- co_mortality_zip[i,]
+  ac_mod <- glm(all_cause_n ~ 1, offset=log(p30plus5yr/1000), 
+                family=poisson, data=df)
+  co_mortality_zip[i,"ac_per_1000_30plus5y"] <- exp(coef(summary(ac_mod))[1,1])
+  co_mortality_zip[i,"ac_per_1000_30plus5y_se"] <- exp(coef(summary(ac_mod))[1,2])
+  
+  na_mod <- glm(non_accidental_n ~ 1, offset=log(p30plus5yr/1000), 
+                family=poisson, data=df)
+  co_mortality_zip[i,"na_per_1000_30plus5y"] <- exp(coef(summary(na_mod))[1,1])
+  co_mortality_zip[i,"na_per_1000_30plus5y_se"] <- exp(coef(summary(na_mod))[1,2])
+}
 
 # save zip estimate file
 write_path <- "./Data/VS Data/co_mortality_zip_30plus_rate_period.csv"
