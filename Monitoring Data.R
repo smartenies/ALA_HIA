@@ -45,7 +45,7 @@ options(scipen = 9999) #avoid scientific notation
 library(Hmisc)
 library(stringr)
 
-years <- c(2014)
+years <- c(2009:2017)
 state <- "08" #Colorado
 all_counties <- c("041", "043", "101") #"El Paso, Fremont, and Pueblo
 
@@ -97,8 +97,8 @@ for(county in all_counties) {
 output$datetime <- as.POSIXct(paste(output$Date.Local, output$X24.Hour.Local), 
                               format="%Y-%m-%d %H",tz = "GMT")
 
-save(output, file = "./Data/AQS Data/AQS Data 2014.RData")
-write.csv(output, file = "./Data/AQS Data/AQS Data 2014.csv",
+save(output, file = "./Data/AQS Data/AQS Data 209-2017.RData")
+write.csv(output, file = "./Data/AQS Data/AQS Data 2009-2017.csv",
           row.names = F)
 
 #' -----------------------------------------------------------------------------
