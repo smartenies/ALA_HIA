@@ -12,21 +12,20 @@
 #' decommissioned by 2025.
 #' 
 #' This script generates the population density grid for each ZCTA in the area
-#'     1) The ZCTAs are rasterized (resolution = 0.008 deg)
+#'     1) The ZCTAs are rasterized (resolution = 0.00833 deg)
 #'     2) Population density is assigned to ZCTA cells
 #'     3) A spatial grid object with ZCTA ID and population denisty is saved
+#'     4) The CMAQ grid cell centroids are extracted from the CMAQ netcdf 
+#'     
 #' =============================================================================
 
 library(foreign)
 library(sp)
-library(Hmisc)
 library(gstat)
 library(rgdal)
+library(raster)
 library(ggplot2)
 library(ggmap)
-library(scales)
-library(ggsn)
-library(raster)
 library(rgeos)
 library(maptools)
 library(ggthemes)
@@ -35,9 +34,31 @@ library(RColorBrewer)
 library(gridExtra)
 library(plyr)
 library(stringr)
-library(readxl)
 
-geo_data <- "C:/Users/semarten/Documents/Geodatabases"
+#' For ggplots
+simple_theme <- theme(
+  #aspect.ratio = 1,
+  text  = element_text(family="Calibri",size = 12, color = 'black'),
+  panel.spacing.y = unit(0,"cm"),
+  panel.spacing.x = unit(0.25, "lines"),
+  panel.grid.minor = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.border=element_rect(fill = NA),
+  panel.background=element_blank(),
+  axis.ticks = element_line(colour = "black"),
+  axis.text = element_text(color = "black", size=10),
+  # legend.position = c(0.1,0.1),
+  plot.margin=grid::unit(c(0,0,0,0), "mm"),
+  legend.key = element_blank()
+)
+windowsFonts(Calibri=windowsFont("TT Calibri"))
+options(scipen = 9999) #avoid scientific notation
+
+geo_data <- "T:/Rsch-MRS/ECHO/SEM Large Data/Spatial Data"
+utm_13 <- "+init=epsg:26913"
+mercator <- "+proj=merc +a=6370000.0 +b=6370000.0 +lat_ts=33 +lon_0=0"
+ll_nad83 <- "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
+ll_wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 #' -----------------------------------------------------------------------------
 #' 1) Rasterize ZCTAs in Colorado
@@ -46,9 +67,11 @@ geo_data <- "C:/Users/semarten/Documents/Geodatabases"
 #' -----------------------------------------------------------------------------
 
 #' Read in the population density geotiff
-pop_den <- raster(paste(geo_data, "/2015_CO_PopDensity.tif", sep=""))
+pop_den <- raster("./Data/SEDAC Data/2010-ColoradoPopDensity.tif")
 summary(pop_den)
 res(pop_den)
+
+crs(pop_den)
 
 load("./Data/Spatial Data/co_zcta_latlong.RData")
 zcta_p <- spTransform(co_zcta, CRS=proj4string(pop_den)) #' match CRS
@@ -72,10 +95,11 @@ plot(zcta_r,colNA="black")
 plot(zcta_p, col=NA, border="blue", add=T)
 
 #' Check out how well the rasterization worked in GIS
-writeOGR(zcta_p, dsn = geo_data, layer = "ZCTA_poly",
+sedac_data <- "./Data/SEDAC Data"
+writeOGR(zcta_p, dsn = sedac_data, layer = "ZCTA_poly",
          driver="ESRI Shapefile", overwrite_layer = T)
-writeRaster(zcta_r, filename=paste(geo_data,"/ZCTA_ras.asc",sep=""),
-            format="ascii", overwrite=TRUE)
+writeRaster(zcta_r, filename=paste(sedac_data,"/ZCTA_ras.tif",sep=""),
+            format="GTiff", overwrite=TRUE)
 
 #' Create a spatial grid data frame with both ZCTA ID and population denisty
 den_grid <- as(pop_den, 'SpatialGridDataFrame')
@@ -91,5 +115,48 @@ summary(zcta_pts)
 plot(zcta_grid)
 plot(zcta_p, col=NA, border="blue", add=T)
 
-save(zcta_grid, zcta_pts, file="./Data/Spatial Data/ZCTA grid.RData")
+save(zcta_grid, zcta_pts, file="./Data/SEDAC Data/ZCTA grid.RData")
+
+
+#' Make grid for CMAQ receptors
+library(ncdf4)
+
+#' Open the netcdf file
+cmaq <- nc_open("./Data/CMAQ Data/southern_colorado.nc")
+summary(cmaq)
+
+#' Extract coordinates
+cmaq_lon <- ncvar_get(cmaq, var="lon")
+cmaq_lat <- ncvar_get(cmaq, var="lat")
+
+cmaq_coords <- data.frame(lon = as.vector(cmaq_lon),
+                          lat = as.vector(cmaq_lat))
+
+#' plot grid cell centroids
+ggplot(cmaq_coordinates, aes(x=lon, y=lat)) +
+  simple_theme
+
+
+
+cmaq <- raster("./Data/CMAQ Data/southern_colorado.nc")
+cmaq
+extent(cmaq)
+
+
+
+
+
+
+
+cmaq_o <- ncvar_get(cmaq, varid="ozone")
+cmaq_p <- ncvar_get(cmaq, varid="pm")
+
+
+
+cmaq <- raster("./Data/CMAQ Data/southern_colorado.nc")
+cmaq
+summary(cmaq)
+res(cmaq)
+
+plot(cmaq)
 

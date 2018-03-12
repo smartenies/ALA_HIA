@@ -32,6 +32,7 @@ library(RColorBrewer)
 library(gridExtra)
 library(plyr)
 library(stringr)
+library(ncdf4)
 
 #' For ggplots
 simple_theme <- theme(
@@ -54,8 +55,13 @@ windowsFonts(Calibri=windowsFont("TT Calibri"))
 options(scipen = 9999) #avoid scientific notation
 
 geo_data <- "T:/Rsch-MRS/ECHO/SEM Large Data/Spatial Data"
+sedac_data <- "./Data/SEDAC Data"
+cmaq_data <- "./Data/CMAQ Data"
 utm_13 <- "+init=epsg:26913"
-lat_long <- "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
+mercator <- "+proj=merc +a=6370000.0 +b=6370000.0 +lat_ts=33 +lon_0=0"
+ll_nad83 <- "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
+ll_wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
 #' =============================================================================
 
 folder <- "./Data/CMAQ Data/"
@@ -79,14 +85,24 @@ for (city in 1:length(cities)) {
   #' ---------------------------------------------------------------------------
   #' Set up the receptor data frames
   #' ---------------------------------------------------------------------------
-  recs <- unique(df[,c("longitude", "latitude")])
-  recs <- recs[with(recs, order(longitude, latitude)),]
-  recs$rec_id <- rev(seq(1:nrow(recs)))
-  recs <- recs[order(recs$rec_id),]
+  rec <- unique(df[,c("longitude", "latitude")])
+  rec <- rec[with(rec, order(longitude, latitude)),]
+  rec$rec_id <- rev(seq(1:nrow(rec)))
+  rec <- rec[order(rec$rec_id),]
   
-  save(recs, file=paste("./HIA Inputs/", city_name, 
+  save(rec, file=paste("./HIA Inputs/", city_name, 
                         "_receptors.RData", sep=""))
-    
+  save(rec, file=paste("./Data/CMAQ Data/", city_name, 
+                        "_receptors.RData", sep=""))
+  
+  #' write out receptors to a shapefile
+  rec_sp <- rec
+  coordinates(rec_sp) <- c("longitude", "latitude")
+  proj4string(rec_sp) <- CRS(ll_wgs84)
+  writeOGR(rec_sp, dsn = cmaq_data, 
+           layer = paste(city_name, "rec", sep="_"),
+           driver="ESRI Shapefile", overwrite_layer = T)
+  
   #' date and hour indicators
   df$datetime <- as.POSIXct(df$Date)
   df$Date <- NULL
@@ -96,10 +112,10 @@ for (city in 1:length(cities)) {
   df$hour <- substr(as.character(df$datetime), start=12, stop=13)
     
   #' adding receptor ID
-  df <- merge(df, recs, by=c("longitude", "latitude"))
+  df <- merge(df, rec, by=c("longitude", "latitude"))
   df <- df[with(df, order(rec_id, day, hour)),]
   
-  rm(recs)
+  rm(rec)
   
   #' ---------------------------------------------------------------------------  
   #' Summarizing PM2.5 metrics at each receptor
