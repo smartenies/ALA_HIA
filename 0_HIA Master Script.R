@@ -64,10 +64,11 @@ ll_wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 #' Designate the file and path names for this run 
 #' =============================================================================
 
+#' -----------------------------------------------------------------------------
 #' Population weighting  and exposure assessment setup
 #' cmaq_out <- "southern_colorado.nc"
 #' pop_den_tif <- "2010-COloradoPopDensity.tif"
-
+#' -----------------------------------------------------------------------------
 
 
 #' -----------------------------------------------------------------------------
