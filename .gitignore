@@ -18,3 +18,5 @@
 *.tiff
 *.jpeg
 
+# ignore markdown
+*.html

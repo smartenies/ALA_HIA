@@ -1,4 +1,4 @@
-#' =============================================================================
+#' -----------------------------------------------------------------------------
 #' Project: American Lung Association HIA
 #' Date created: January 23, 2018
 #' Author: Sheena Martenies
@@ -16,9 +16,8 @@
 #' Before running this script:
 #'     1) Run the "HIA CR Pooling" script
 #'     2) Run the "HIA Databases" script
-#' =============================================================================
+#' -----------------------------------------------------------------------------
 
-library(foreign)
 library(sp)
 library(gstat)
 library(rgdal)
@@ -29,11 +28,9 @@ library(rgeos)
 library(maptools)
 library(ggthemes)
 library(ggrepel)
-library(RColorBrewer)
-library(gridExtra)
-library(plyr)
 library(stringr)
 library(ncdf4)
+library(tidyverse)
 
 #' For ggplots
 simple_theme <- theme(
@@ -51,39 +48,39 @@ simple_theme <- theme(
   plot.margin=grid::unit(c(0,0,0,0), "mm"),
   legend.key = element_blank()
 )
+
 windowsFonts(Calibri=windowsFont("TT Calibri"))
 options(scipen = 9999) #avoid scientific notation
 
 geo_data <- "T:/Rsch-MRS/ECHO/SEM Large Data/Spatial Data"
 utm_13 <- "+init=epsg:26913"
-mercator <- "+proj=merc +a=6370000.0 +b=6370000.0 +lat_ts=33 +lon_0=0"
 ll_nad83 <- "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
 ll_wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
-#' =============================================================================
-#' Designate the file and path names for this run 
-#' =============================================================================
-
 #' -----------------------------------------------------------------------------
-#' Population weighting  and exposure assessment setup
-#' cmaq_out <- "southern_colorado.nc"
-#' pop_den_tif <- "2010-COloradoPopDensity.tif"
+#' Designate the path, input, and output names for this run 
 #' -----------------------------------------------------------------------------
 
+#' Population weighting  and exposure assessment setup:
+cmaq_out <- "southern_colorado.nc"
+pop_den_tif <- "2010-COloradoPopDensity.tif"
 
-#' -----------------------------------------------------------------------------
-#' Health and Population Data:
+#' CMAQ start date:
+start_date <- as.Date("01-01-2011", format="%m-%d-%Y")
+
+#' HIA inputs:
 inp_path <- "./HIA Inputs/"
 cr_file <- "CR.txt"
 pop_file <- "populations.txt"
 rate_rile <- "rates.txt"
-#' -----------------------------------------------------------------------------
 
-
-#' -----------------------------------------------------------------------------
 #' Outputs:
 out_path <- "./HIA Outputs/"
 
+
+#' -----------------------------------------------------------------------------
+#' Run Scripts
 #' -----------------------------------------------------------------------------
 
-
+source("1_HIA Population Weighting.R", local=T)
+source("2_HIA Exposure Metrics.R", local=T)

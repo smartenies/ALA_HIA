@@ -1,4 +1,4 @@
-#' =============================================================================
+#' -----------------------------------------------------------------------------
 #' Project: American Lung Association HIA
 #' Date created: March 5, 2018
 #' Author: Sheena Martenies
@@ -18,10 +18,11 @@
 #'     match the CMAQ outputs (which are in WGS84 and are not on a regular grid)
 #'     2) Population density is extracted at each CAMQ receptor
 #'     3) The object is saved to be used in the exposure assessment code
-#' =============================================================================
+#' -----------------------------------------------------------------------------
 
 library(foreign)
 library(sp)
+library(spatialEco)
 library(gstat)
 library(rgdal)
 library(raster)
@@ -62,13 +63,13 @@ mercator <- "+proj=merc +a=6370000.0 +b=6370000.0 +lat_ts=33 +lon_0=0"
 ll_nad83 <- "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
 ll_wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
-#' =============================================================================
+#' -----------------------------------------------------------------------------
 #' Set up the analysis
 #' Will be done in the "master" script later
 
 cmaq_out <- "southern_colorado.nc"
 pop_den_tif <- "2010-COloradoPopDensity.tif"
-#' =============================================================================
+#' -----------------------------------------------------------------------------
 
 #' -----------------------------------------------------------------------------
 #' Read in the CMAQ data and get the coordinates
@@ -86,26 +87,28 @@ summary(cmaq)
 #' Matrix dimensions are 19 x 30
 cmaq_lon <- ncvar_get(cmaq, var="lon")
 cmaq_lat <- ncvar_get(cmaq, var="lat")
-grid_dim <- dim(cmaq_lat)
+dim(cmaq_lat)
 
 nc_close(cmaq)
 
 #' Create data frame with ID 
-cmaq_df <- data.frame(x = as.vector(cmaq_lon),
-                      y = as.vector(cmaq_lat))
+cmaq_df <- data.frame(lon = as.vector(cmaq_lon),
+                      lat = as.vector(cmaq_lat))
 cmaq_df$id <- seq(1:nrow(cmaq_df))
 
 #' plot grid cell centroids 
 #' The grid of points is irregular due to the geographic coordinate system used
 ggplot(cmaq_df) +
-  geom_point(aes(x=x, y=y)) +
+  geom_point(aes(x=lon, y=lat)) +
   simple_theme
+head(cmaq_df)
 
-#' Create a spatial object from the CAMQ coordinates
+#' Create a spatial object from the CMAQ coordinates
 cmaq_p <- cmaq_df
-coordinates(cmaq_p) <- c("x", "y")
+coordinates(cmaq_p) <- c("lon", "lat")
 proj4string(cmaq_p) <- CRS(ll_wgs84)
 summary(cmaq_p)
+cmaq_p@data <- cmaq_df
 
 cmaq_e <- extent(cmaq_p)
 cmaq_e
@@ -130,16 +133,16 @@ pop_den_r_1k <- crop(pop_den_t, cmaq_e)
 pop_den_r_1k
 
 plot(pop_den_r_1k)
-points(cmaq_p)
+points(cmaq_p, pch=20, cex=0.5)
 
 #' Convert the raster to points
 pop_den_df <- as.data.frame(rasterToPoints(pop_den_r_1k))
-names(pop_den_df) <- c("x", "y", "pop_denisty")
+names(pop_den_df) <- c("lon", "lat", "pop_denisty")
 pop_den_p <- pop_den_df
-coordinates(pop_den_p) <- c("x", "y")
+coordinates(pop_den_p) <- c("lon", "lat")
 proj4string(pop_den_p) <- proj4string(pop_den_r_1k)
 
-plot(pop_den_p, pch="*")
+plot(pop_den_p, pch=20, cex=0.5)
 
 #' -----------------------------------------------------------------------------
 #' Regrid the populaton density points to the WRF (CMAQ) grid
@@ -155,25 +158,26 @@ plot(pop_den_p, pch="*")
 
 #' Create an empty raster with the same dimensions and CRS as the CMAQ points
 cmaq_r <- raster(cmaq_e, nrow=nrow(cmaq_lat), ncol=ncol(cmaq_lat))
-crs(cmaq_r) <- crs(ll_wgs84)
+crs(cmaq_r) <- crs(cmaq_p)
+cmaq_r
 
 #' Rasterize the SEDAC data to this empty grid using average of points in cell
-#' Range for population density is much smaller when averaging to the 4 km grid
+#' Range for population density is much smaller when averaging to the ~4 km grid
 pop_den_r_4k <- rasterize(pop_den_df[,1:2], cmaq_r, pop_den_df[,3], fun=mean)
 
 pop_den_r_1k
 pop_den_r_4k
 
 plot(pop_den_r_4k)
-points(cmaq_p)
+points(cmaq_p, pch=20, cex=0.5)
 
 #' Extract population density at each CMAQ receptor
 cmaq_p <- extract(pop_den_r_4k, cmaq_p, sp=T)
-names(cmaq_p) <- c("id", "pop_density")
+names(cmaq_p)[ncol(cmaq_p)] <- "pop_density"
 
 #' plot CMAQ population density
-ggplot(as.data.frame(cmaq_p)) +
-  geom_point(aes(x=x, y=y, col = pop_density)) +
+ggplot(as.data.frame(cmaq_p), aes(x=lon, y=lat, col = pop_density)) +
+  geom_point() +
   simple_theme
 
 #' -----------------------------------------------------------------------------
@@ -181,130 +185,57 @@ ggplot(as.data.frame(cmaq_p)) +
 #' -----------------------------------------------------------------------------
 
 cmaq_p_df <- as.data.frame(cmaq_p)
-save(cmaq_p, cmaq_p_df, file="./Data/CMAQ Data/cmaq_pop_denisty.RData")
+save(cmaq_p, cmaq_p_df, pop_den_r_4k, pop_den_r_1k,
+     file="./Data/CMAQ Data/cmaq_pop_density.RData")
 
+#' -----------------------------------------------------------------------------
+#' Get ZCTAs that are covered by the CAMQ grid
+#' -----------------------------------------------------------------------------
 
+#' Read in the ZCTA shapefile
+co_zcta <- readOGR(dsn = geo_data, layer = "CO_ZCTA_2014")
+co_zcta <- spTransform(co_zcta, CRS=proj4string(cmaq_p)) #' match CRS
 
+plot(co_zcta)
+points(cmaq_p, col="red", pch=20, cex=0.5)
 
+#' Subset ZCTA that are completely within the CMAQ domain
+cmaq_bound <- gConvexHull(cmaq_p)
+co_zcta$contains <- gContains(cmaq_bound, co_zcta, byid = T)
 
+plot(co_zcta)
+plot(cmaq_bound, add=T)
 
+#' All ZCTAs with at least one point
+zcta <- co_zcta[cmaq_p,]
 
+plot(zcta)
+points(cmaq_p, col="red", pch=20, cex=0.5)
 
+#' ZCTAs that are completely within the CMAQ domain
+zcta_within <- co_zcta[which(co_zcta$contains == T),]
 
+plot(zcta_within)
+points(cmaq_p, col="red", pch=20, cex=0.5)
 
+#' Save the ZCTA objects
+save(co_zcta, zcta, zcta_within,
+     file="./Data/Spatial Data/zip codes.RData")
 
+#' Does every ZCTA contain a CMAQ receptor?
+rec_count <- colSums(gContains(zcta, cmaq_p, byid=T))
+rec_count <- setNames(rec_count, zcta@data$GEOID10)
+rec_count
 
+#' How many ZCTAs are there?
+nrow(zcta)
 
+#' How many with at least one receptor?
+length(rec_count[rec_count > 0])
 
+#' How many with just one?
+length(rec_count[rec_count == 1])
 
-
-
-
-
-#' # -----------------------------------------------------------------------------
-#' # Rasterize ZCTAs in Colorado
-#' #     - Assigns the ZCTA identifier to the population density grid
-#' #     - Used to generate population-weighted exposure metrics for each ZCTA
-#' #     and day
-#' # -----------------------------------------------------------------------------
-#' # 
-#' # Read in the population density geotiff
-#' #' This was trimmed in ArcMap before working in R
-#' #' Resolution is ~1 km (0.0083333 deg)
-#' pop_den_r <- raster("./Data/SEDAC Data/2010-ColoradoPopDensity.tif")
-#' pop_den_r
-#' 
-#' #' Read in the ZCTA shapefile
-#' load("./Data/Spatial Data/co_zcta_latlong.RData")
-#' co_zcta_s <- spTransform(co_zcta, CRS=ll_wgs84) #' match CRS
-#' co_zcta_s@data$ALAND10 <- NULL
-#' rm(co_zcta)
-#' 
-#' 
-#' #' Visualziing the Colorado data
-#' #' Can see Denver, Fort Collins, CO Springs, and Pueblo centers
-#' plot(pop_den_r)
-#' plot(co_zcta_s, add=T)
-#' 
-#' #' add a numeric identifier
-#' co_zcta_s$GEOID_NUM <- as.numeric(co_zcta_s$GEOID10)
-#' link <- co_zcta_s@data[,c("GEOID10", "GEOID_NUM")]
-#' 
-#' #' rasterize CO ZCTA using the population density raster
-#' #' cell value is the ZCTA number
-#' 
-#' ext <- extent(pop_den_r)
-#' co_zcta_r <- raster(ext, res=res(pop_den_r))
-#' crs(co_zcta_r) <- crs(ll_wgs84)
-#' co_zcta_r <- rasterize(co_zcta_s, co_zcta_r, field='GEOID_NUM')
-#' co_zcta_r
-#' rm(ext)
-#' 
-#' #' Visualize the rasterized shapefile
-#' #' See holes for the military base and Denver International
-#' plot(co_zcta_r,colNA="black")
-#' plot(co_zcta_s, col=NA, border="blue", add=T)
-#' 
-#' #' Check out how well the rasterization worked in GIS
-#' sedac_data <- "./Data/SEDAC Data"
-#' writeOGR(co_zcta_s, dsn = sedac_data, layer = "co_zcta_shapefile",
-#'          driver="ESRI Shapefile", overwrite_layer = T)
-#' writeRaster(co_zcta_r, filename=paste(sedac_data,"/co_zcta_ras.tif",sep=""),
-#'             format="GTiff", overwrite=TRUE)
-#' 
-#' #' Create a spatial grid data frame with both co_zcta ID and population denisty
-#' #' Will be used later to create a weighting matrix
-#' pop_den_g <- as(pop_den_r, 'SpatialGridDataFrame')
-#' 
-#' co_zcta_g <- as(co_zcta_r, 'SpatialGridDataFrame')
-#' co_zcta_g <- cbind(co_zcta_g, pop_den_g)
-#' names(co_zcta_g@data) <- c("GEOID10", "pop_den")
-#' summary(co_zcta_g)
-#' 
-#' plot(co_zcta_g["pop_den"])
-#' plot(co_zcta_g["GEOID10"])
-#' 
-#' save(co_zcta_g, co_zcta_r, pop_den_r, pop_den_g, link,
-#'      file="./Data/SEDAC Data/co_zcta grid.RData")
-#' 
-#' #' Clear up some space
-#' rm(co_zcta_g, co_zcta_r, co_zcta_s,
-#'    pop_den_g, pop_den_r, link)
-#' 
-#' #' -----------------------------------------------------------------------------
-#' #' Use IDW to interpolate to SEDAC/ZCTA grid centroids
-#' #' -----------------------------------------------------------------------------
-#' 
-#' #' Read in the ZCTA and population data grids
-#' load("./Data/SEDAC Data/co_ZCTA grid.RData")
-#' 
-#' #' Create a spatial object from the CAMQ coordinates
-#' cmaq_p <- cmaq_df
-#' coordinates(cmaq_p) <- c("x", "y")
-#' proj4string(cmaq_p) <- CRS(ll_wgs84)
-#' summary(cmaq_p)
-#' 
-#' cmaq_e <- extent(cmaq_p)
-#' cmaq_e
-#' 
-#' #' Trim the density raster using the CMAQ extent
-#' pop_den_r <- crop(pop_den_r, cmaq_e)
-#' pop_den_r
-#' 
-#' plot(pop_den_r)
-#' points(cmaq_p, add=T)
-#' 
-#' #' Spatial points for SEDAC raster grids
-#' pop_den_p <- as.data.frame(rasterToPoints(pop_den_r))
-#' names(pop_den_p) <- c("x", "y", "pop_den")
-#' coordinates(pop_den_p) <- c("x", "y")
-#' proj4string(pop_den_p) <- proj4string(pop_den_r)
-#' summary(pop_den_p)
-#' 
-#' #' Visualize the raster and poiints
-#' plot(pop_den_r)
-#' points(pop_den_p, col="red")
-#' points(cmaq_p, col="blue")
 
 
 
