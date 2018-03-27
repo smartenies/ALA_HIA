@@ -4,35 +4,28 @@
 #' Author: Sheena Martenies
 #' Contact: Sheena.Martenies@colostate.edu
 #' 
-#' 
-#' This script generates population weighted exposures at the ZCTA level
+#' This script generates population-weighted exposures at the ZCTA level
 #' for the American Lung Association HIA project.
-#' Much of this code adapted from prior work by Ryan Gan 
+#' Much of this code adapted from prior work by Ryan Gan with some help from
+#' other spatial analysts on campus
 #'     
-#'     Analysis steps:
-#'     1) CMAq receptors are extracted from the netcdf file
-#'     2) The 4d array in the NetCDF file is converted to a data frame 
-#'     3) Annual and daily exposures are summarized for each CMAQ receptor
-#'     
-#'       
-#'     4) The SEDAC population density data (~1 km grid) are regridded to 
-#'        match the CMAQ outputs (which are in WGS84 and are not on a regular grid)
-#'     5) Population density is extracted at each CAMQ receptor
-#'     6) The object is saved to be used in the exposure assessment code
+#' Once we agree that this is the route we want to take, I'll loop through 
+#' the daily metrics for each pollutant and then generate a final data set for
+#' the HIA     
 #' -----------------------------------------------------------------------------
 
 library(sp)
 library(gstat)
-library(spatialEco)
 library(rgdal)
 library(raster)
+library(spatialEco)
 library(ggplot2)
 library(ggmap)
 library(rgeos)
 library(maptools)
 library(ggthemes)
-library(plyr)
 library(ncdf4)
+library(plyr)
 
 #' For ggplots
 simple_theme <- theme(
@@ -67,6 +60,8 @@ cmaq_out <- "southern_colorado.nc"
 pop_den_tif <- "2010-COloradoPopDensity.tif"
 start_date <- as.Date("01/01/2011", format="%m/%d/%Y")
 #' -----------------------------------------------------------------------------
+
+start_time <- Sys.time()
 
 #' -----------------------------------------------------------------------------
 #' Read in the CMAQ data and get the coordinates
@@ -363,7 +358,6 @@ pop_den_res <- res(pop_den_r_1k)
 
 cmaq_r <- raster(pop_den_e, crs=crs(pop_den_r_1k),
                  nrows = nrow(pop_den_r_1k), ncols = ncol(pop_den_r_1k))
-
 cmaq_r
 
 #' grid needed for interpolation
@@ -458,14 +452,18 @@ length(rec_count[rec_count == 1])
 #' Zonal statistics to get population-weighted average concentration
 #' -----------------------------------------------------------------------------
 
-#' Extract pop-weighted cmaq concentration and population density in each ZCTA 
-#' using extract() in the raster package and weighted means and SD from
-#' the Hmisc package
+library(dplyr)
+library(Hmisc)
 
-zcta_conc_l <- extract(cmaq_r, zcta, weights=T, normalizeWeights = T)
-names(zcta_conc_l) <- zcta@data$GEOID10
+#' Extract population density in each ZCTA using extract() (raster package)
+#' Save this data frame-- going to be the same for each metric in the final
+#' loop
+#' 
+#' NOTE: extract(weights = T) means that the extract function estimates the 
+#' fraction of the ZCTA area occupied by the grid cell. 
+#' The new weighted mean weight is population density * area weight
 
-zcta_pop_l <- extract(pop_den_r_1k, zcta, weights=T, normalizeWeights = T)
+zcta_pop_l <- extract(pop_den_r_1k, zcta, weights=T)
 names(zcta_pop_l) <- zcta@data$GEOID10
 
 undo_lists <- function(x) {
@@ -480,47 +478,258 @@ undo_lists <- function(x) {
   return(df)
 }
 
+zcta_pop <- undo_lists(zcta_pop_l)
+colnames(zcta_pop) <- c("pop_den", "pop_area_wt", "pop_GEOID10")
+
+#' check to see if area weights within each ZCTA sum to 1
+wt_check <- zcta_pop %>%
+  group_by(pop_GEOID10) %>%
+  summarise(wt_zcta = sum(pop_area_wt))
+summary(wt_check$wt_zcta)
+
+#' Extract CMAQ concentrations and calculate weighted means and SD (Hmisc) 
+#' cmaq_r is the smoothed surface
+zcta_conc_l <- extract(cmaq_r, zcta, weights=T)
+names(zcta_conc_l) <- zcta@data$GEOID10
+
 #' Undo lists and combine
 zcta_conc <- undo_lists(zcta_conc_l)
-colnames(zcta_conc) <- c("conc", "area_wt1", "GEOID10")
+colnames(zcta_conc) <- c("conc", "conc_area_wt", "GEOID10")
 
-zcta_pop <- undo_lists(zcta_pop_l)
-colnames(zcta_pop) <- c("pop_den", "area_wt2", "id2")
-
+# Combine the ZCTA concentrations with the population density dataframe
 zcta_conc <- cbind(zcta_conc, zcta_pop)
 
-#' New weight-- population density * the area of the cell within the polygon
-zcta_conc$wt_pop_den <- ifelse(zcta_conc$area_wt1 != zcta_conc$area_wt2, NA,
-                               zcta_conc$area_wt1 * zcta_conc$pop_den)
-
 #' Calculate weighted averages at the ZCTA level
-library(dplyr)
-library(Hmisc)
+#' New weight-- population density * the fraction of the pop_den cell in the 
+#' polygon *  the fraction of the cmaq cell in the polygon
 zcta_cmaq <- zcta_conc %>%
+  mutate(wt_prod = conc_area_wt * pop_area_wt * pop_den) %>%
   group_by(GEOID10) %>%
-  summarise(wt_conc = wtd.mean(x = conc, weights = wt_pop_den),
-            wt_conc_sd = sqrt(wtd.var(x = conc, weights = wt_pop_den)))
+  summarise(wt_conc = wtd.mean(x = conc, weights = wt_prod),
+            wt_conc_sd = sqrt(wtd.var(x = conc, weights = wt_prod)))
+head(zcta_cmaq)
+summary(zcta_cmaq)
 
-#' Plot concentrations
-zcta <- merge(zcta, zcta_cmaq, by="GEOID10")
-spplot(zcta, "wt_conc",
-       main="Predicted monthly average PM2.5\n(ZCTA level using zonal statistics)")
-
-zcta_within <- merge(zcta_within, zcta_cmaq, by="GEOID10")
-spplot(zcta_within, "wt_conc",
-       main="Predicted monthly average PM2.5\n(ZCTAs completely in the modeling domain)")
+#' Plot exposure concentration
+zcta_1 <- merge(zcta, zcta_cmaq, by="GEOID10")
+zcta_within_1 <- merge(zcta_within, zcta_cmaq, by="GEOID10")
 
 spplot(cmaq_ok, "var1.pred", 
        main="Predicted monthly average PM2.5 (Ordinary Kriging)")
 
+spplot(zcta_1, "wt_conc",
+       main="Predicted monthly average PM2.5\n(ZCTA level using zonal statistics)")
+
+spplot(zcta_within_1, "wt_conc",
+       main="Predicted monthly average PM2.5\n(ZCTAs completely within the modeling domain)")
+
+#' How long does this code take?
+#' Remember- a lot of this only needs to be done once 
+#' (e.g., metrics, pop-density)
+stop_time <- Sys.time()
+stop_time - start_time
+
+#' -----------------------------------------------------------------------------
+#' How to these concentrations compare with the alternative methods of averaging
+#' CMAQ points within the ZCTA?
+#' 
+#' AM ONE: Kriging to census block centroids, then population weighted average
+#' at the ZCTA level (recommended by Ana Rappold)
+#'    1) ID census blocks in the study area
+#'    2) krige to these locations
+#'    3) use block populations to population-weight ZCTA averages
+#' 
+#' AM TWO: point in polygon approach (partially based on Ryan's code)
+#'    1) Regrid population density to the CMAQ grid
+#'    2) extract population density for each CMAQ point
+#'    3) population-weight exposures at the ZCTA level based on points-in-poly
+#' -----------------------------------------------------------------------------
+
+#' ALTERNATIVE METHOD 1: KRIGE TO CENSUS BLOCKS AND POPULATON WEIGHT TO ZCTA
+#' Read in census block shapefile (from 2010)
+co_blocks <- readOGR(dsn = geo_data, layer="tabblock2010_08_pophu")
+cmaq_bound <- spTransform(cmaq_bound, crs(co_blocks))
+
+#' Subset to blocks that touch the study domain
+#' Make sure cordinate systems match
+blocks <- co_blocks[cmaq_bound,]
+blocks <- spTransform(blocks, crs(test_p))
+blocks$BLOCKID10 <- as.character(blocks$BLOCKID10)
+
+rm(co_blocks)
+
+# plot(blocks)
+# points(test_p, pch=20, cex=0.5, col="red")
+
+#' Block centroids for krigings
+block_cent <- gCentroid(blocks, byid=T, id=as.character(blocks$BLOCKID10))
+plot(block_cent)
+points(test_p, pch=20, cex=0.5, col="red")
+
+#' Assign ZCTAs to census block centroids
+block_cent_zcta <- sp::over(block_cent, zcta)
+block_zctas <- data.frame(BLOCKID10 = as.character(rownames(block_cent_zcta)),
+                          ZCTA5CE10 = as.character(block_cent_zcta$ZCTA5CE10))
+
+#' Ordinary kriging to the census block centroids
+cmaq_vgm_2 <- variogram(ann_mean ~ 1, test_p) #'generate the semivariogram
+plot(cmaq_vgm_2)
+
+show.vgms() 
+
+#' Testing Exp, Sph, Gau, Wav, and Per models
+cmaq_fit_2 <- fit.variogram(cmaq_vgm_2, 
+                            model=vgm(c("Sph", "Exp", "Gau", "Wav", "Per"))) 
+cmaq_fit_2 
+
+plot(cmaq_vgm_2, cmaq_fit_2)
+
+cmaq_ok_2 <- krige(ann_mean ~ 1, test_p, block_cent, cmaq_fit)
+cmaq_ok_2$BLOCKID10 <- as.character(blocks@data$BLOCKID10)
+
+#' Merge OK results with blocks and then aggregate to ZCTA
+blocks <- merge(blocks, cmaq_ok_2, by="BLOCKID10")
+blocks <- merge(blocks, block_zctas, by="BLOCKID10")
+blocks$GEOID10 <- blocks$ZCTA5CE10
+
+#' Based on the OK plot, we see the same high concentrations in the
+#' "urban" centers of Colorado Springs and Pueblo (max is 20.6 ug/m3)
+spplot(cmaq_ok_2, "var1.pred", 
+       main="Predicted monthly average PM2.5 at census blocks (Ordinary Kriging)")
+
+# spplot(blocks, "var1.pred", 
+#        main="Predicted monthly average PM2.5 at census blocks (Ordinary Kriging)")
+
+#' Population-weighted average at the ZCTA level
+zcta_cmaq_2 <- as.data.frame(blocks) %>%
+  group_by(GEOID10) %>%
+  filter(sum(POP10) > 0) %>% #' drop ZCTAs where population == 0 (should be 1)
+  summarise(wt_conc = wtd.mean(x = var1.pred, weights = POP10),
+            wt_conc_sd = sqrt(wtd.var(x = var1.pred, weights = POP10)))
+head(zcta_cmaq_2)
+summary(zcta_cmaq_2)
+
+#' Plot exposure concentrations
+#' Three of the population ZCTAs don't contain a receptor
+zcta_2 <- merge(zcta, zcta_cmaq_2, by="GEOID10")
+zcta_within_2 <- merge(zcta_within, zcta_cmaq_2, by="GEOID10")
+
+spplot(zcta_2, "wt_conc",
+       main="Predicted monthly average PM2.5\n(ZCTA level using block pop weights)")
+
+spplot(zcta_within_2, "wt_conc",
+       main="Predicted monthly average PM2.5\n(ZCTAs completely within the modeling domain)")
+
+#' ALTERNATIVE METHOD 2: AVERAGE OF POINTS IN POLYGONS
+#' Start with the 1k population density grid
+plot(pop_den_r_1k)
+points(cmaq_p, pch=20, cex=0.5)
+
+#' Convert the raster to points
+pop_den_df <- as.data.frame(rasterToPoints(pop_den_r_1k))
+names(pop_den_df) <- c("lon", "lat", "pop_denisty")
+pop_den_p <- pop_den_df
+coordinates(pop_den_p) <- c("lon", "lat")
+proj4string(pop_den_p) <- proj4string(pop_den_r_1k)
+
+plot(pop_den_p, pch=20, cex=0.5)
+
+#' Create an empty raster with the same dimensions and CRS as the CMAQ points
+cmaq_e <- extent(cmaq_p)
+cmaq_r3 <- raster(cmaq_e, crs=crs(cmaq_p),
+                  nrows = nrow(cmaq_lat), ncols = ncol(cmaq_lat))
+cmaq_r3
+
+#' Rasterize the SEDAC data to this empty grid using average of points in cell
+#' Range for population density is much smaller when averaging to the ~4 km grid
+pop_den_r_4k <- rasterize(pop_den_df[,1:2], cmaq_r3, pop_den_df[,3], fun=mean)
+
+pop_den_r_1k
+pop_den_r_4k
+
+plot(pop_den_r_4k)
+points(cmaq_p, pch=20, cex=0.5)
+
+#' Extract population density at each CMAQ receptor
+cmaq_pop <- cmaq_p
+cmaq_pop<- extract(pop_den_r_4k, cmaq_p, sp=T)
+names(cmaq_pop)[ncol(cmaq_pop)] <- "pop_density"
+
+#' plot CMAQ population density
+ggplot(as.data.frame(cmaq_pop), aes(x=lon, y=lat, col = pop_density)) +
+  geom_point() +
+  simple_theme
+
+#' Merge annual mean with population density points
+cmaq_exp_3 <- merge(cmaq_pop[,c("lon", "lat", "pop_density")], 
+                    test_p, by=c("lon", "lat"))
+
+#' ID which receptors are in each ZCTA
+zcta_exp_3 <- as.data.frame(point.in.poly(cmaq_exp_3, zcta))
+
+#' Calculate weighted average in each ZCTA
+zcta_cmaq_3 <- zcta_exp_3 %>%
+  group_by(GEOID10) %>%
+  summarise(wt_conc = wtd.mean(x = ann_mean, weights = pop_density),
+            wt_conc_sd = sqrt(wtd.var(x = ann_mean, weights = pop_density)))
+head(zcta_cmaq_3)
+summary(zcta_cmaq_3)
+
+#' Plot exposure concentrations
+#' Three of the population ZCTAs don't contain a receptor
+zcta_3 <- merge(zcta, zcta_cmaq_3, by="GEOID10")
+zcta_within_3 <- merge(zcta_within, zcta_cmaq_3, by="GEOID10")
+
+spplot(zcta_3, "wt_conc",
+       main="Predicted monthly average PM2.5\n(ZCTA level using point-in-polygon)")
+
+spplot(zcta_within_3, "wt_conc",
+       main="Predicted monthly average PM2.5\n(ZCTAs completely within the modeling domain)")
 
 
+#' How do the alternative approachs compare with the zonal statistics approach?
+summary(zcta_cmaq)
+summary(zcta_cmaq_2)
+summary(zcta_cmaq_3)
+
+compare <- zcta_cmaq[,c("GEOID10", "wt_conc")]
+compare <- merge(compare, zcta_cmaq_2[,c("GEOID10", "wt_conc")], by="GEOID10", all.x=T)
+compare <- merge(compare, zcta_cmaq_3[,c("GEOID10", "wt_conc")], by="GEOID10", all.x=T)
+
+colnames(compare) <- c("GEOID10", "wt_conc_1", "wt_conc_2", "wt_conc_3")
+
+compare$pd_1v2 <- (compare$wt_conc_1 - compare$wt_conc_2) / compare$wt_conc_1 * 100
+compare$pd_1v3 <- (compare$wt_conc_1 - compare$wt_conc_3) / compare$wt_conc_3 * 100
+
+compare
+summary(compare)
+
+#' Coefficient of variation: Zonal statistics method
+sd(compare$wt_conc_1, na.rm=TRUE)/ mean(compare$wt_conc_1, na.rm=TRUE)*100
+
+#' Coefficient of variation: census block pop weighting
+sd(compare$wt_conc_2, na.rm=TRUE)/ mean(compare$wt_conc_2, na.rm=TRUE)*100
+
+#' Coefficient of variation: point-in-polygon
+sd(compare$wt_conc_3, na.rm=TRUE)/ mean(compare$wt_conc_3, na.rm=TRUE)*100
+
+#' Cumulative distributions
+plot(ecdf(compare$wt_conc_1),
+     main="Cumulative distribution: Zonal statistics")
+plot(ecdf(compare$wt_conc_2),
+     main="Cumulative distribution: Block-pop weighting")
+plot(ecdf(compare$wt_conc_3),
+     main="Cumulative distribution: Point-in-polygon")
 
 
+# Where are the biggest differences?
+zcta_comp <- merge(zcta, compare, by="GEOID10")
 
+spplot(zcta_comp, "pd_1v2",
+       main="Percent difference: zonal statistics vs. block-pop weighting")
 
-
-
+spplot(zcta_comp, "pd_1v3",
+       main="Percent difference: zonal statistics vs. point-in-polygon")
 
 
 
