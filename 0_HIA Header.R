@@ -1,36 +1,19 @@
-#' -----------------------------------------------------------------------------
-#' Project: American Lung Association HIA
-#' Date created: January 23, 2018
-#' Author: Sheena Martenies
-#' Contact: Sheena.Martenies@colostate.edu
-#' 
-#' Description:
-#' 
-#' This project estimates the health impacts attributable to two coal-fired 
-#' power plants in the front range region of CO: Comanche (in Pueblo, CO) and 
-#' Martin Drake (in Colorado Springs, CO). The facilities are slated to be 
-#' decommissioned by 2025.
-#' 
-#' This script sets up the HIA
-#' 
-#' Before running this script:
-#'     1) Run the "HIA CR Pooling" script
-#'     2) Run the "HIA Databases" script
-#' -----------------------------------------------------------------------------
+#' Header script that needs to run between each script in the HIA
+#' Loads all the packages and the inputs needed for each method
 
 library(sp)
 library(gstat)
 library(rgdal)
 library(raster)
+library(spatialEco)
 library(ggplot2)
 library(ggmap)
 library(rgeos)
 library(maptools)
 library(ggthemes)
-library(ggrepel)
-library(stringr)
 library(ncdf4)
 library(tidyverse)
+library(Hmisc)
 
 #' For ggplots
 simple_theme <- theme(
@@ -65,22 +48,16 @@ ll_wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 cmaq_out <- "southern_colorado.nc"
 pop_den_tif <- "2010-COloradoPopDensity.tif"
 
+#' Unique prefix for all the output files in this test
+pre <- "jan_2011_test_"
+
 #' CMAQ start date:
 start_date <- as.Date("01-01-2011", format="%m-%d-%Y")
 
 #' HIA inputs:
-inp_path <- "./HIA Inputs/"
-cr_file <- "CR.txt"
-pop_file <- "populations.txt"
-rate_rile <- "rates.txt"
+cr_file <- "./HIA Inputs/CR.txt"
+pop_file <- "./HIA Inputs/population.txt"
+rate_file <- "./HIA Inputs/rates.txt"
 
 #' Outputs:
 out_path <- "./HIA Outputs/"
-
-
-#' -----------------------------------------------------------------------------
-#' Run Scripts
-#' -----------------------------------------------------------------------------
-
-source("1_HIA Population Weighting.R", local=T)
-source("2_HIA Exposure Metrics.R", local=T)
