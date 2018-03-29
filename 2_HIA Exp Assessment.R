@@ -346,6 +346,9 @@ zcta_within <- zcta[which(zcta$contains == T),]
 plot(zcta_within)
 points(cmaq_p, col="red", pch=20, cex=0.5)
 
+#' Save the spatial objects
+save(zcta, zcta_within, file="./HIA Inputs/zcta.RData")
+
 #' Extract population density in each ZCTA using extract() (raster package)
 #' Save this data frame-- going to be the same for each metric 
 #' 

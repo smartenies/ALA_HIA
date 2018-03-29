@@ -73,8 +73,8 @@ time_windows <- c("Warm season", "School year", NA)
 
 cr <- full_cr[which(full_cr$time_window %in% time_windows),]
 
-pm_cr <- cr[which(cr$pollutant=="PM2.5"),]
-o3_cr <- cr[which(cr$pollutant=="O3"),] 
+pm_cr <- cr[which(cr$pollutant=="pm"),]
+o3_cr <- cr[which(cr$pollutant=="o3"),] 
 
 save(cr, pm_cr, o3_cr, full_cr, file="./Data/CR datasets.RData")
 
@@ -86,7 +86,7 @@ load("./Data/CR datasets.RData")
 
 library(metafor)
 
-pols <- c("PM2.5", "O3")
+pols <- c("pm", "o3")
 
 pooled_crs <- data.frame(matrix(ncol=9, nrow=0))
 
@@ -96,7 +96,6 @@ colnames(pooled_crs) <- c("pol", "metric", "outcome", "n",
 for (i in 1:length(pols)) {
   cr_df <- cr[which(cr$pollutant == pols[i]),]
   metrics <- unique(cr_df$metric)
-  
   
   for (j in 1:length(metrics)) {
     met_df <- cr_df[which(cr_df$metric == metrics[j]),]
@@ -147,8 +146,6 @@ for (i in 1:length(pols)) {
   }
 }
 
-save(pooled_crs, file="./Data/Pooled CRs.RData")
-
 #' =============================================================================
 #' Additional estimate of asthma exacerbations for PM2.5
 #' Based on 2012 RIA for the PM2.5 NAAQS:
@@ -156,22 +153,19 @@ save(pooled_crs, file="./Data/Pooled CRs.RData")
 #'      2) Pool SoB/cough with wheeze using random effects
 #' =============================================================================
 
-load("./Data/Pooled CRs.RData")
-load("./Data/CR datasets.RData")
-
 library(metafor)
 
 ast_outcomes1 <- c("minor_astc", "minor_asts")
 ast_outcomes2 <- c("minor_astw")
 
-pm_ast_cr1 <- cr[which(cr$pollutant=="PM2.5" & cr$outcome %in% ast_outcomes1),]
-pm_ast_cr2 <- cr[which(cr$pollutant=="PM2.5" & cr$outcome %in% ast_outcomes2),]
+pm_ast_cr1 <- cr[which(cr$pollutant=="pm" & cr$outcome %in% ast_outcomes1),]
+pm_ast_cr2 <- cr[which(cr$pollutant=="pm" & cr$outcome %in% ast_outcomes2),]
 
 #' meta-analysis for shortness of breath and cough
 rma_model1 <- rma(yi = cr, sei = se, data=pm_ast_cr1)
 
 #' get the first pooled beta and SE into the second dataset 
-pm_ast_cr2[nrow(pm_ast_cr2)+1,1] <- "PM2.5"
+pm_ast_cr2[nrow(pm_ast_cr2)+1,1] <- "pm"
 pm_ast_cr2[nrow(pm_ast_cr2),3] <- "minor_ast"
 pm_ast_cr2[nrow(pm_ast_cr2),16] <- rma_model1$beta[,1]
 pm_ast_cr2[nrow(pm_ast_cr2),19] <- rma_model1$se
@@ -180,7 +174,7 @@ pm_ast_cr2[nrow(pm_ast_cr2),19] <- rma_model1$se
 rma_model2 <- rma(yi = cr, sei = se, data=pm_ast_cr2)
 
 #' add final beta and se to the pooled CR dataset
-pooled_crs[nrow(pooled_crs)+1,1] <- "PM2.5"
+pooled_crs[nrow(pooled_crs)+1,1] <- "pm"
 pooled_crs[nrow(pooled_crs),2] <- "d24h_mean"
 pooled_crs[nrow(pooled_crs),3] <- "minor_ast"
 pooled_crs[nrow(pooled_crs),4] <- 2
@@ -191,8 +185,8 @@ pooled_crs[nrow(pooled_crs),8] <- rma_model2$QE
 pooled_crs[nrow(pooled_crs),9] <- rma_model2$QEp
 
 save(pooled_crs, file="./Data/Pooled CRs.RData")
-write.csv(pooled_crs, file="./Data/Pooled CRs.csv",
-          row.names = F)
+write.table(pooled_crs, file="./Data/Pooled CRs.csv",
+            row.names = F)
   
   
   
