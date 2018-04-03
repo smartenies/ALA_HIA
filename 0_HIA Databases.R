@@ -106,7 +106,10 @@ pppd <- cbind(out_df, morb2)
 
 rownames(pppd) <- seq(1:nrow(pppd))
 
-pppd <- rename(pppd, c("ZIP" = "GEOID"))
+pppd$GEOID <- pppd$ZIP
+pppd$ZIP <- NULL
+
+pppd <- pppd[,c(ncol(pppd), 1:(ncol(pppd)-1))]
 
 write.table(pppd, "./HIA Inputs/rates.txt", row.names = F)
 
