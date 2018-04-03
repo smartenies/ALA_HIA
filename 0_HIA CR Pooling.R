@@ -65,14 +65,14 @@ options(scipen = 9999) #avoid scientific notation
 #' -----------------------------------------------------------------------------
 
 full_cr <- read_excel("./Data/Outcome CRs and Valuation.xlsx",
-                      sheet=1, skip=7)
+                      sheet=1, skip=13)
 colnames(full_cr) <- tolower(colnames(full_cr))
 colnames(full_cr) <- gsub(" ", "_", colnames(full_cr))
 
 pm_cr <- full_cr[which(full_cr$pollutant=="pm"),]
 o3_cr <- full_cr[which(full_cr$pollutant=="o3"),] 
 
-save(cr, pm_cr, o3_cr, full_cr, file="./Data/CR datasets.RData")
+save(pm_cr, o3_cr, full_cr, file="./Data/CR datasets.RData")
 
 #' =============================================================================
 #' Pool the CRs for each pollutant and outcome using the 'metafor' package
