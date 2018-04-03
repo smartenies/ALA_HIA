@@ -69,12 +69,8 @@ full_cr <- read_excel("./Data/Outcome CRs and Valuation.xlsx",
 colnames(full_cr) <- tolower(colnames(full_cr))
 colnames(full_cr) <- gsub(" ", "_", colnames(full_cr))
 
-time_windows <- c("Warm season", "School year", NA)
-
-cr <- full_cr[which(full_cr$time_window %in% time_windows),]
-
-pm_cr <- cr[which(cr$pollutant=="pm"),]
-o3_cr <- cr[which(cr$pollutant=="o3"),] 
+pm_cr <- full_cr[which(full_cr$pollutant=="pm"),]
+o3_cr <- full_cr[which(full_cr$pollutant=="o3"),] 
 
 save(cr, pm_cr, o3_cr, full_cr, file="./Data/CR datasets.RData")
 
@@ -89,12 +85,11 @@ library(metafor)
 pols <- c("pm", "o3")
 
 pooled_crs <- data.frame(matrix(ncol=9, nrow=0))
-
 colnames(pooled_crs) <- c("pol", "metric", "outcome", "n", 
                           "cr_beta", "cr_se", "I^2", "Q", "Q_p")
 
 for (i in 1:length(pols)) {
-  cr_df <- cr[which(cr$pollutant == pols[i]),]
+  cr_df <- full_cr[which(full_cr$pollutant == pols[i]),]
   metrics <- unique(cr_df$metric)
   
   for (j in 1:length(metrics)) {
@@ -128,20 +123,20 @@ for (i in 1:length(pols)) {
       pooled_crs[nrow(pooled_crs),9] <- rma_model$QEp
       
       #' Generate the forest plot and funnel plot
-      f_name <- paste("./Data/CR Plots/",pols[i], " ", metrics[j], 
-                      " ", outcomes[k]," forest.jpeg", sep="")
-      fun_name <- paste("./Data/CR Plots/",pols[i], " ", metrics[j], 
-                      " ", outcomes[k]," funnel.jpeg", sep="")
-      
-      jpeg(f_name)
-      forest(rma_model, slab=df$source, digits=4,
-             mlab=paste(pols[i], metrics[j], "\n", outcomes[k]))
-      dev.off()
-      
-      jpeg(fun_name)
-      funnel(rma_model, digits=4,
-             xlab=paste("Observed", pols[i], metrics[j], outcomes[k]))
-      dev.off()
+      # f_name <- paste("./Data/CR Plots/",pols[i], " ", metrics[j], 
+      #                 " ", outcomes[k]," forest.jpeg", sep="")
+      # fun_name <- paste("./Data/CR Plots/",pols[i], " ", metrics[j], 
+      #                 " ", outcomes[k]," funnel.jpeg", sep="")
+      # 
+      # jpeg(f_name)
+      # forest(rma_model, slab=df$source, digits=4,
+      #        mlab=paste(pols[i], metrics[j], "\n", outcomes[k]))
+      # dev.off()
+      # 
+      # jpeg(fun_name)
+      # funnel(rma_model, digits=4,
+      #        xlab=paste("Observed", pols[i], metrics[j], outcomes[k]))
+      # dev.off()
     }
   }
 }
@@ -158,8 +153,8 @@ library(metafor)
 ast_outcomes1 <- c("minor_astc", "minor_asts")
 ast_outcomes2 <- c("minor_astw")
 
-pm_ast_cr1 <- cr[which(cr$pollutant=="pm" & cr$outcome %in% ast_outcomes1),]
-pm_ast_cr2 <- cr[which(cr$pollutant=="pm" & cr$outcome %in% ast_outcomes2),]
+pm_ast_cr1 <- full_cr[which(full_cr$pollutant=="pm" & full_cr$outcome %in% ast_outcomes1),]
+pm_ast_cr2 <- full_cr[which(full_cr$pollutant=="pm" & full_cr$outcome %in% ast_outcomes2),]
 
 #' meta-analysis for shortness of breath and cough
 rma_model1 <- rma(yi = cr, sei = se, data=pm_ast_cr1)
@@ -185,8 +180,8 @@ pooled_crs[nrow(pooled_crs),8] <- rma_model2$QE
 pooled_crs[nrow(pooled_crs),9] <- rma_model2$QEp
 
 save(pooled_crs, file="./Data/Pooled CRs.RData")
-write.table(pooled_crs, file="./Data/Pooled CRs.csv",
-            row.names = F)
+write.csv(pooled_crs, file="./Data/Pooled CRs.csv",
+          row.names = F)
   
   
   

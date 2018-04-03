@@ -32,9 +32,6 @@ rate <- read.table(rate_file, header=T, stringsAsFactors = F)
 r_out <- unique(gsub("_se", "", colnames(rate)))[-c(1, 17)]
 cr <- cr[which(cr$outcome %in% r_out),]
 
-#' Drop MI
-cr <- cr
-
 #' load the ZCTA file
 load("./HIA Inputs/zcta.RData")
 
@@ -139,7 +136,8 @@ for (i in 1:1) {
         }
         
         #' find median, 2.5th and 97.5th percentiles for the daily estimates
-        scale <- ifelse(metrics[j] == "ann_mean", 1, 365 / length(days))
+        #' all rates are daily, so need to scale by the number of days modeled
+        scale <- d_per_y / length(days)
                         
         temp <- data.frame(zcta = zctas[l],
                            n_days = length(days),
@@ -166,17 +164,19 @@ for (i in 1:1) {
 Sys.time() - start_time
 
 #' Summarize by pollutant and outcome
+detach(package:plyr)
 total_df <- out_df %>%
   group_by(pol, outcome) %>%
   summarise(median = round(sum(median, na.rm=T),2),
             p2.5 = round(sum(p2.5, na.rm=T),2),
             p97.5 = round(sum(p97.5, na.rm=T),2),
-            median_scaled = round(sum(median_scaled, na.rm=T),2),
-            p2.5_scaled = round(sum(p2.5_scaled, na.rm=T),2),
-            p97.5_scaled = round(sum(p97.5_scaled, na.rm=T),2))
+            median_scaled = round(sum(median_scaled, na.rm=T),0),
+            p2.5_scaled = round(sum(p2.5_scaled, na.rm=T),0),
+            p97.5_scaled = round(sum(p97.5_scaled, na.rm=T),0))
   
 save(out_df, total_df,
      file=paste("./HIA Outputs/", pre, pol_names[i], "_zcta_impacts.RData",sep=""))
-  
+write.csv(total_df,
+          file=paste("./HIA Outputs/", pre, pol_names[i], "_zcta_impacts.csv",sep=""))  
   
   

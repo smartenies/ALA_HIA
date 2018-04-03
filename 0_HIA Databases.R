@@ -122,7 +122,7 @@ values <- read.table("./Data/Ages and Values.txt", header=T,
 values$age_group <- gsub("-", "_", values$age_group)
 values$age_group <- paste("p", values$age_group, sep="")
 
-cr <- merge(pooled_crs, values, by="outcome")
+cr <- merge(pooled_crs, values, by="outcome", all.x=T)
 
 cr <- cr[,c("outcome", "pol", "metric", "age_group", "cr_beta", "cr_se", "value_2024")]
 

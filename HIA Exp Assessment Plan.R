@@ -8,6 +8,9 @@
 #' for the American Lung Association HIA project.
 #' Much of this code adapted from prior work by Ryan Gan with some help from
 #' other spatial analysts on campus
+#' 
+#' Here we also compare monthly PM2.5 and ozone predictions to monitored 
+#' values from the AQS     
 #'     
 #' Once we agree that this is the route we want to take, I'll loop through 
 #' the daily metrics for each pollutant and then generate a final data set for
@@ -43,8 +46,24 @@ simple_theme <- theme(
   plot.margin=grid::unit(c(0,0,0,0), "mm"),
   legend.key = element_blank()
 )
+
+simple_theme2 <- theme(
+  #aspect.ratio = 1,
+  text  = element_text(family="Calibri",size = 12, color = 'black'),
+  panel.spacing.y = unit(0,"cm"),
+  panel.spacing.x = unit(0.25, "lines"),
+  panel.grid.minor = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.border=element_rect(fill = NA),
+  panel.background=element_blank(),
+  axis.ticks = element_blank(),
+  axis.text = element_blank(),
+  # legend.position = c(0.1,0.1),
+  plot.margin=grid::unit(c(0,0,0,0), "mm"),
+  legend.key = element_blank()
+)
 windowsFonts(Calibri=windowsFont("TT Calibri"))
-options(scipen = 9999) #avoid scientific notation
+options(scipen = 10000) #avoid scientific notation
 
 geo_data <- "T:/Rsch-MRS/ECHO/SEM Large Data/Spatial Data"
 utm_13 <- "+init=epsg:26913"
@@ -315,7 +334,7 @@ rm(df, df_name, rec, temp, a, b, avg_list, col_ids, conc, date_seq,
 
 df_names <- c("pm", "o3")
 
-#' annual average PM2.5 at each CMAQ receptor
+#' monthly average PM2.5 at each CMAQ receptor
 load(file = paste("./HIA Inputs/", df_names[1], "_exposure_metrics.RData", 
                   sep=""))
 test_df <- exp_list[[1]]
@@ -323,10 +342,33 @@ test_df <- exp_list[[1]]
 #' merge annual mean with receptor points
 test_p <- merge(cmaq_p, test_df, by=c("lon", "lat"))
 
+#' monthly average O3
+load(file = paste("./HIA Inputs/", df_names[2], "_exposure_metrics.RData", 
+                  sep=""))
+test_df2 <- exp_list[[1]]
+
+#' merge annual mean with receptor points
+test_p2 <- merge(cmaq_p, test_df2, by=c("lon", "lat"))
+test_p2$ann_mean <- test_p2$ann_mean * 1000 #' ppm to ppb
+summary(test_p2)
+
 #' plot annual mean at cmaq receptors
 ggplot(as.data.frame(test_p)) +
   geom_point(aes(x=lon.1, y=lat.1, color=ann_mean)) +
+  scale_color_continuous(low = "lightblue", high="red", name="Monthly mean\nPM2.5 (ug/m3)") +
+  xlab("Longitude") + ylab("Latitude") +
   simple_theme
+ggsave(filename = "./Maps/ALA Meeting/CMAQ Monthly PM2.5.jpeg", device = "jpeg",
+       dpi=400, width = 6, height = 6, units="in")
+
+#' plot annual mean at cmaq receptors
+ggplot(as.data.frame(test_p2)) +
+  geom_point(aes(x=lon.1, y=lat.1, color=ann_mean)) +
+  scale_color_continuous(low = "lightblue", high="red", name="Monthly mean\nO3 (ppb)") +
+  xlab("Longitude") + ylab("Latitude") +
+  simple_theme
+ggsave(filename = "./Maps/ALA Meeting/CMAQ Monthly Ozone.jpeg", device = "jpeg",
+       dpi=400, width = 6, height = 6, units="in")
 
 #' -----------------------------------------------------------------------------
 #' Read in the SEDAC population density grid
@@ -349,6 +391,12 @@ pop_den_r_1k <- crop(pop_den_t, cmaq_e)
 pop_den_r_1k
 
 #' Overlay the CMAQ receptors with the population denisty raster
+temp <- spplot(pop_den_r_1k,
+               main="Population Density (persons per sq km)")
+jpeg(filename= "./Maps/ALA Meeting/Population Density.jpeg")
+print(temp)
+dev.off()
+
 plot(pop_den_r_1k)
 points(test_p, pch=20, cex=0.5)
 
@@ -363,6 +411,10 @@ cmaq_r
 #' grid needed for interpolation
 cmaq_g <- as(cmaq_r, "SpatialGrid")
 
+#' -----------------------------------------------------------------------------
+#' Krige smooth surfaces for PM2.5 and O3
+#' -----------------------------------------------------------------------------
+
 #' First, trying IDW from CMAQ receptors to empty grid
 cmaq_idw <- gstat::krige(ann_mean ~ 1, test_p, newdata=cmaq_g)
 
@@ -372,7 +424,7 @@ cmaq_idw <- gstat::krige(ann_mean ~ 1, test_p, newdata=cmaq_g)
 #' Concentrations up to 25 ug/m3 might be on the high side
 #' Also... the IDW plot doesn't look as smooth as it could be
 spplot(cmaq_idw, "var1.pred", 
-       main="Predicted monthly average PM2.5 (IDW Interpol.)")
+        main="Predicted monthly average PM2.5 (IDW Interpol.)")
 
 #' Second, going to give ordinary kriging a try
 cmaq_vgm <- variogram(ann_mean ~ 1, test_p) #'generate the semivariogram
@@ -382,24 +434,52 @@ show.vgms()
 
 #' Testing Exp, Sph, Gau, Wav, and Per models
 cmaq_fit <- fit.variogram(cmaq_vgm, 
-                          model=vgm(c("Sph", "Exp", "Gau", "Wav", "Per"))) 
-cmaq_fit #' Gaussian it is
-
+                          model=vgm(c("Sph", "Exp", "Gau", 
+                                      "Wav", "Per", "Cir"))) 
+cmaq_fit #' Circular
 plot(cmaq_vgm, cmaq_fit)
-
-cmaq_ok <- krige(ann_mean ~ 1, test_p, cmaq_g, cmaq_fit)
+cmaq_ok <- krige(ann_mean ~ 1, test_p, cmaq_g, cmaq_fit,
+                 nmax=24)
 
 #' Based on the OK plot, we still see some high concentration in the 
 #' "urban" centers of Colorado Springs and Pueblo (max is 20.6 ug/m3)
 #' Going to proceed with OK for now, since it gives us a much smoother surface
 #' In the future, will need to make sure this can be dynamic (multiple pols and
 #' metrics need to be kriged)
-spplot(cmaq_ok, "var1.pred", 
-       main="Predicted monthly average PM2.5 (Ordinary Kriging)")
+temp <- spplot(cmaq_ok, "var1.pred", 
+               main="Predicted monthly average PM2.5 (ug/m3)")
+jpeg(filename= "./Maps/ALA Meeting/Smoothed Monthly PM2.5.jpeg")
+print(temp)
+dev.off()
 
 #' Turn grid back into raster for zonal statistics
-cmaq_r <- raster(cmaq_ok)
-cmaq_r
+cmaq_pm_r <- raster(cmaq_ok)
+cmaq_pm_r
+
+#' Repeat for ozone
+cmaq_vgm <- variogram(ann_mean ~ 1, test_p2) #'generate the semivariogram
+plot(cmaq_vgm)
+
+show.vgms() 
+
+#' Testing Exp, Sph, Gau, Wav, and Per models
+cmaq_fit <- fit.variogram(cmaq_vgm, fit.kappa=T,
+                          model=vgm(c("Sph", "Exp", "Gau", 
+                                      "Wav", "Per", "Cir"))) 
+cmaq_fit #' Gaussian
+plot(cmaq_vgm, cmaq_fit)
+cmaq_ok <- krige(ann_mean ~ 1, test_p2, cmaq_g, cmaq_fit, 
+                 nmax=24)
+
+temp <- spplot(cmaq_ok, "var1.pred", 
+               main="Predicted monthly average O3 (ppb)")
+jpeg(filename= "./Maps/ALA Meeting/Smoothed Monthly O3.jpeg")
+print(temp)
+dev.off()
+
+#' Turn grid back into raster for zonal statistics
+cmaq_o3_r <- raster(cmaq_ok)
+cmaq_o3_r
 
 #' clean up the environment at bit
 rm(cmaq_vgm, cmaq_e, cmaq_g, pop_den_e, pop_den_t, pop_den_res)
@@ -463,7 +543,7 @@ library(Hmisc)
 #' fraction of the ZCTA area occupied by the grid cell. 
 #' The new weighted mean weight is population density * area weight
 
-zcta_pop_l <- extract(pop_den_r_1k, zcta, weights=T)
+zcta_pop_l <- raster::extract(pop_den_r_1k, zcta, weights=T)
 names(zcta_pop_l) <- zcta@data$GEOID10
 
 undo_lists <- function(x) {
@@ -482,6 +562,7 @@ zcta_pop <- undo_lists(zcta_pop_l)
 colnames(zcta_pop) <- c("pop_den", "pop_area_wt", "pop_GEOID10")
 
 #' check to see if area weights within each ZCTA sum to 1
+library(tidyverse)
 wt_check <- zcta_pop %>%
   group_by(pop_GEOID10) %>%
   summarise(wt_zcta = sum(pop_area_wt))
@@ -489,38 +570,39 @@ summary(wt_check$wt_zcta)
 
 #' Extract CMAQ concentrations and calculate weighted means and SD (Hmisc) 
 #' cmaq_r is the smoothed surface
-zcta_conc_l <- extract(cmaq_r, zcta, weights=T)
-names(zcta_conc_l) <- zcta@data$GEOID10
+zcta_pm_conc_l <- raster::extract(cmaq_pm_r, zcta, weights=T)
+names(zcta_pm_conc_l) <- zcta@data$GEOID10
 
 #' Undo lists and combine
-zcta_conc <- undo_lists(zcta_conc_l)
-colnames(zcta_conc) <- c("conc", "conc_area_wt", "GEOID10")
+zcta_pm_conc <- undo_lists(zcta_pm_conc_l)
+colnames(zcta_pm_conc) <- c("conc", "conc_area_wt", "GEOID10")
 
 # Combine the ZCTA concentrations with the population density dataframe
-zcta_conc <- cbind(zcta_conc, zcta_pop)
+zcta_pm_conc <- cbind(zcta_pm_conc, zcta_pop)
 
 #' Calculate weighted averages at the ZCTA level
 #' New weight-- population density * the fraction of the pop_den cell in the 
 #' polygon *  the fraction of the cmaq cell in the polygon
-zcta_cmaq <- zcta_conc %>%
+library(Hmisc)
+zcta_pm_cmaq <- zcta_pm_conc %>%
   mutate(wt_prod = conc_area_wt * pop_area_wt * pop_den) %>%
   group_by(GEOID10) %>%
   summarise(wt_conc = wtd.mean(x = conc, weights = wt_prod),
             wt_conc_sd = sqrt(wtd.var(x = conc, weights = wt_prod)))
-head(zcta_cmaq)
-summary(zcta_cmaq)
+head(zcta_pm_cmaq)
+summary(zcta_pm_cmaq)
 
 #' Plot exposure concentration
-zcta_1 <- merge(zcta, zcta_cmaq, by="GEOID10")
-zcta_within_1 <- merge(zcta_within, zcta_cmaq, by="GEOID10")
+zcta_pm <- merge(zcta, zcta_pm_cmaq, by="GEOID10")
+zcta_within_pm <- merge(zcta_within, zcta_pm_cmaq, by="GEOID10")
 
-spplot(cmaq_ok, "var1.pred", 
-       main="Predicted monthly average PM2.5 (Ordinary Kriging)")
+temp <- spplot(zcta_pm, "wt_conc",
+       main="Predicted monthly average PM2.5 (ug/m3)\n(ZCTA level using zonal statistics)")
+jpeg(filename= "./Maps/ALA Meeting/ZCTA Monthly PM2.5.jpeg")
+print(temp)
+dev.off()
 
-spplot(zcta_1, "wt_conc",
-       main="Predicted monthly average PM2.5\n(ZCTA level using zonal statistics)")
-
-spplot(zcta_within_1, "wt_conc",
+spplot(zcta_within_pm, "wt_conc",
        main="Predicted monthly average PM2.5\n(ZCTAs completely within the modeling domain)")
 
 #' How long does this code take?
@@ -528,6 +610,169 @@ spplot(zcta_within_1, "wt_conc",
 #' (e.g., metrics, pop-density)
 stop_time <- Sys.time()
 stop_time - start_time
+
+
+#' Repeat with Ozone
+#' Extract CMAQ concentrations and calculate weighted means and SD (Hmisc) 
+#' cmaq_r is the smoothed surface
+zcta_o3_conc_l <- raster::extract(cmaq_o3_r, zcta, weights=T)
+names(zcta_o3_conc_l) <- zcta@data$GEOID10
+
+#' Undo lists and combine
+zcta_o3_conc <- undo_lists(zcta_o3_conc_l)
+colnames(zcta_o3_conc) <- c("conc", "conc_area_wt", "GEOID10")
+
+# Combine the ZCTA concentrations with the population density dataframe
+zcta_o3_conc <- cbind(zcta_o3_conc, zcta_pop)
+
+#' Calculate weighted averages at the ZCTA level
+#' New weight-- population density * the fraction of the pop_den cell in the 
+#' polygon *  the fraction of the cmaq cell in the polygon
+library(Hmisc)
+zcta_o3_cmaq <- zcta_o3_conc %>%
+  mutate(wt_prod = conc_area_wt * pop_area_wt * pop_den) %>%
+  group_by(GEOID10) %>%
+  summarise(wt_conc = wtd.mean(x = conc, weights = wt_prod),
+            wt_conc_sd = sqrt(wtd.var(x = conc, weights = wt_prod)))
+head(zcta_o3_cmaq)
+summary(zcta_o3_cmaq)
+
+#' Plot exposure concentration
+zcta_pm <- merge(zcta, zcta_o3_cmaq, by="GEOID10")
+zcta_within_pm <- merge(zcta_within, zcta_o3_cmaq, by="GEOID10")
+
+temp <- spplot(zcta_pm, "wt_conc",
+               main="Predicted monthly average O3 (ppb)\n(ZCTA level using zonal statistics)")
+jpeg(filename= "./Maps/ALA Meeting/ZCTA Monthly O3.jpeg")
+print(temp)
+dev.off()
+
+spplot(zcta_within_pm, "wt_conc",
+       main="Predicted monthly average O3\n(ZCTAs completely within the modeling domain)")
+
+#' -----------------------------------------------------------------------------
+#' How well do the smoothed surfaces and zonal statistics predict monthly
+#' averages at the monitors?
+#' -----------------------------------------------------------------------------
+
+#' Read in the monitoring data from EPA's AQS
+files <- list.files("./Data/AQS Data/Jan 2011/", pattern=".txt", full.names = T)
+aqs <- data.frame()
+for (i in 1:length(files)) {
+  temp <- read.table(files[i], header=T, sep=",")
+  aqs <- rbind(aqs, temp)
+  rm(temp)
+}
+
+#' Get points for monitors
+monitors <- unique(aqs[,c("site", "parameter", "lon", "lat")])
+monitors_df <- monitors
+coordinates(monitors) <- c("lon", "lat")
+crs(monitors) <- CRS(ll_wgs84)
+monitors@data <- monitors_df
+
+monitors
+monitors@data
+
+#' Map of study area ZCTAs, CAMQ grid, and AQS monitors
+base_map <- get_map(location=bbox(zcta), maptype="terrain",
+                    zoom = 8, source="google")
+scale_bar <- ggsn::scalebar(location = "bottomright", dd2km = T, model="WGS84",
+                            dist=20, st.bottom=F, st.size = 3, height=0.15, 
+                            x.min = -104, x.max = -103, 
+                            y.min = 37.1, y.max = 39.2) 
+n_arrow <- geom_segment(arrow=arrow(length=unit(4, "mm")),
+                        aes(x=-103, xend=-103, y=37.5, yend=37.65),
+                        color="black", size=1)
+n_label <- geom_text(aes(x=-103, y=37.68), label="N")
+
+ggmap(base_map) + scale_bar + n_arrow + n_label
+
+zcta@data$id <- rownames(zcta@data)
+zcta_polygons <- fortify(zcta, region="id")
+zcta_map <- merge(zcta_polygons, 
+                  zcta@data, by="id")
+
+area_map <- ggmap(base_map) +
+  ggtitle("HIA boundaries") +
+  geom_polygon(data=zcta_map, aes(x=long, y=lat, group=group),
+               color="black", fill="NA", size=0.25) +
+  geom_point(data=as.data.frame(test_p), 
+             aes(x=lon, y=lat, color="cmaq", shape="cmaq"),
+             cex=0.5) +
+  geom_point(data=as.data.frame(monitors), 
+             aes(x=lon, y=lat, color="monitor", shape="monitor"),
+             cex=3.5) +
+  scale_color_manual(values=c("cmaq" = "red", "monitor" = "blue"),
+                     labels=c("CMAQ receptors", "AQS Monitors"),
+                     name="") +
+  scale_shape_manual(values=c("cmaq" = 20, "monitor" = 18),
+                     labels=c("CMAQ receptors", "AQS Monitors"),
+                     name="") +
+  xlab("Longitude") + ylab("Latitude") +
+  scale_bar + n_arrow + n_label +
+  theme(legend.position = c(.8, .8)) +
+  simple_theme
+print(area_map)
+ggsave(area_map, filename = "./Maps/ALA Meeting/Study Area.jpeg", device = "jpeg", 
+       dpi=400, width = 6, height = 6, units="in")
+
+
+#' Summarize monthly pollutant concentrations at each monitor
+aqs_summary <- aqs %>%
+  mutate(value = ifelse(parameter==44201, value*1000, value)) %>%
+  group_by(site, parameter) %>%
+  summarise(measured_mean = mean(value, na.rm=T),
+            measured_sd = sd(value, na.rm=T))
+
+#' Extract monthly average from smoothed surfaces and ZCTA averages
+monitors2 <- merge(monitors, aqs_summary, by=c("site", "parameter"))
+monitors2@data
+
+#' PM2.5
+pm2.5_monitors <- monitors2[which(monitors2$parameter == 88101),]
+pm2.5_monitors <- raster::extract(cmaq_pm_r, pm2.5_monitors, sp=T)
+colnames(pm2.5_monitors@data)[ncol(pm2.5_monitors@data)] <- "smoothed_mean"
+
+pm2.5_zcta <- sp::over(pm2.5_monitors, zcta_pm)
+pm2.5_monitors$zcta_mean <- pm2.5_zcta[,"wt_conc"]
+
+pm2.5_monitors@data
+
+#' Concentrations predicted by CMAQ are much higher than AQS values.
+#' Fewer days measured, though there shouldn't be so much day to day variability
+#' as to nearly triple the monthly average
+#' Could we be looking at PM10?
+pm10_monitors <- monitors2[which(monitors2$parameter == 81102),]
+pm10_monitors <- raster::extract(cmaq_pm_r, pm10_monitors, sp=T)
+colnames(pm10_monitors@data)[ncol(pm10_monitors@data)] <- "smoothed_mean"
+
+pm10_zcta <- sp::over(pm10_monitors, zcta_pm)
+pm10_monitors$zcta_mean <- pm10_zcta[,"wt_conc"]
+
+pm10_monitors@data
+
+#' Ozone
+o3_monitors <- monitors2[which(monitors2$parameter == 44201),]
+o3_monitors <- raster::extract(cmaq_o3_r, o3_monitors, sp=T)
+colnames(o3_monitors@data)[ncol(o3_monitors@data)] <- "smoothed_mean"
+
+o3_zcta <- sp::over(o3_monitors, zcta_pm)
+o3_monitors$zcta_mean <- o3_zcta[,"wt_conc"]
+
+o3_monitors@data
+
+monitors3 <- spRbind(pm2.5_monitors, pm10_monitors)
+monitors3 <- spRbind(monitors3, o3_monitors)
+
+monitors3@data
+
+monitors_sum <- as.data.frame(monitors3) %>%
+  mutate(pct_diff_smoothed = abs((measured_mean - smoothed_mean) / measured_mean) * 100,
+         pct_diff_zcta = abs((measured_mean - zcta_mean) / measured_mean) * 100)
+
+write.csv(monitors_sum, file="./Maps/ALA Meeting/AQS Comparisons.csv",
+          row.names = F)
 
 #' -----------------------------------------------------------------------------
 #' How to these concentrations compare with the alternative methods of averaging
@@ -680,8 +925,8 @@ summary(zcta_cmaq_3)
 zcta_3 <- merge(zcta, zcta_cmaq_3, by="GEOID10")
 zcta_within_3 <- merge(zcta_within, zcta_cmaq_3, by="GEOID10")
 
-spplot(zcta_3, "wt_conc",
-       main="Predicted monthly average PM2.5\n(ZCTA level using point-in-polygon)")
+temp <- spplot(zcta_3, "wt_conc",
+               main="Predicted monthly average PM2.5\n(ZCTA level using point-in-polygon)")
 
 spplot(zcta_within_3, "wt_conc",
        main="Predicted monthly average PM2.5\n(ZCTAs completely within the modeling domain)")

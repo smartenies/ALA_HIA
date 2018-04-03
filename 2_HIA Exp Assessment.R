@@ -390,17 +390,19 @@ pol_names <- c("pm", "o3")
 #' loop through each pollutant and metric
 a2 <- Sys.time()
 
-for (i in 1:length(pol_names)) {
+#for (i in 1:length(pol_names)) {
+for (i in 2:length(pol_names)) {
 
   #' read in data
   load(paste("./HIA Inputs/", pre, pol_names[i], "_receptor_metrics.RData", 
              sep=""))
   
-  if(pol_names[i] == "pm") {
+  metrics <- names(exp_list)
+  if(pol_names[[i]] == "pm") {
     metrics <- names(exp_list)[1:2]
-  } else {
-    metrics <- names(exp_list)
-  }
+  } 
+  
+  metrics
   
   zcta_list <- list()
   for (j in 1:length(metrics)) {
@@ -421,7 +423,8 @@ for (i in 1:length(pol_names)) {
     #' krige cmaq points to the grid
     for (k in 1:length(days)) {
       
-      print("Metric ", j, "of ", length(metrics), "; Day ", k, "of ", length(days), sep="")
+      print(paste("Metric ", j, " of ", length(metrics), 
+                  "; Day ", k, " of ", length(days), sep=""))
       
       #' subset to daily metric
       test_p_2 <- test_p[which(test_p$day == days[k]),]
@@ -441,7 +444,9 @@ for (i in 1:length(pol_names)) {
       plot(cmaq_vgm, cmaq_fit)
       
       #' Ordinary kriging using the fitted semivariogram
-      cmaq_ok <- krige(get(metrics[j]) ~ 1, test_p_2, cmaq_g, cmaq_fit)
+      #' Use 24 nearest points (important for ozone)
+      cmaq_ok <- krige(get(metrics[j]) ~ 1, test_p_2, cmaq_g, cmaq_fit,
+                       nmax=24)
       
       spplot(cmaq_ok, "var1.pred",
              main = paste("pol= ", pol_names[i], ", met= ", metrics[j],

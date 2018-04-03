@@ -54,6 +54,9 @@ pre <- "jan_2011_test_"
 #' CMAQ start date:
 start_date <- as.Date("01-01-2011", format="%m-%d-%Y")
 
+#' How many days should be used to scale the modeled estimates?
+d_per_y <- 365
+
 #' HIA inputs:
 cr_file <- "./HIA Inputs/CR.txt"
 pop_file <- "./HIA Inputs/population.txt"
