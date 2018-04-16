@@ -54,8 +54,14 @@ mort$mort_ac_se <- mort$ac_per_1000_30plus5y_se / 1000 / 365
 mort$mort_na <- mort$na_per_1000_30plus5y / 1000 / 365
 mort$mort_na_se <- mort$na_per_1000_30plus5y_se / 1000 / 365
 
+#' replicate for short term outcomes (ozone)
+mort$st_mort_ac <- mort$mort_ac
+mort$st_mort_ac_se <- mort$mort_ac_se
+mort$st_mort_na <- mort$mort_na
+mort$st_mort_na_se <- mort$mort_na_se
+
 #' just pppd columns
-mort <- mort[,c(1, 10:13)]
+mort <- mort[,c(1, 10:17)]
 
 #' hosptializations for the 65+ population (from Ryan)
 hosp <- read.csv("./Data/CHA Data/co_zip_65plus_rate_period.csv", 

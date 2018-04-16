@@ -23,6 +23,7 @@ library(rgdal)
 library(raster)
 library(spatialEco)
 library(ggplot2)
+library(ggrepel)
 library(ggmap)
 library(rgeos)
 library(maptools)
@@ -316,7 +317,6 @@ rm(df, df_name, rec, temp, a, b, avg_list, col_ids, conc, date_seq,
    day_list, days, hours, i, j, k, l, max, n, n_days_o3, n_days_pm,
    name)
 
-
 #' -----------------------------------------------------------------------------
 #' Interpolate CMAQ concentrations to the 1 k populaton density grid and use
 #' zonal statistics to get the average value for the ZCTAs
@@ -341,6 +341,7 @@ test_df <- exp_list[[1]]
 
 #' merge annual mean with receptor points
 test_p <- merge(cmaq_p, test_df, by=c("lon", "lat"))
+summary(test_p)
 
 #' monthly average O3
 load(file = paste("./HIA Inputs/", df_names[2], "_exposure_metrics.RData", 
@@ -429,14 +430,13 @@ spplot(cmaq_idw, "var1.pred",
 #' Second, going to give ordinary kriging a try
 cmaq_vgm <- variogram(ann_mean ~ 1, test_p) #'generate the semivariogram
 plot(cmaq_vgm)
-
 show.vgms() 
 
 #' Testing Exp, Sph, Gau, Wav, and Per models
 cmaq_fit <- fit.variogram(cmaq_vgm, 
                           model=vgm(c("Sph", "Exp", "Gau", 
                                       "Wav", "Per", "Cir"))) 
-cmaq_fit #' Circular
+cmaq_fit #' Gaussian
 plot(cmaq_vgm, cmaq_fit)
 cmaq_ok <- krige(ann_mean ~ 1, test_p, cmaq_g, cmaq_fit,
                  nmax=24)
@@ -459,14 +459,13 @@ cmaq_pm_r
 #' Repeat for ozone
 cmaq_vgm <- variogram(ann_mean ~ 1, test_p2) #'generate the semivariogram
 plot(cmaq_vgm)
-
 show.vgms() 
 
 #' Testing Exp, Sph, Gau, Wav, and Per models
 cmaq_fit <- fit.variogram(cmaq_vgm, fit.kappa=T,
-                          model=vgm(c("Sph", "Exp", "Gau", 
+                          model=vgm(c("Sph", "Exp", "Gau", "Exc",
                                       "Wav", "Per", "Cir"))) 
-cmaq_fit #' Gaussian
+cmaq_fit #' Circular
 plot(cmaq_vgm, cmaq_fit)
 cmaq_ok <- krige(ann_mean ~ 1, test_p2, cmaq_g, cmaq_fit, 
                  nmax=24)
@@ -638,16 +637,16 @@ head(zcta_o3_cmaq)
 summary(zcta_o3_cmaq)
 
 #' Plot exposure concentration
-zcta_pm <- merge(zcta, zcta_o3_cmaq, by="GEOID10")
-zcta_within_pm <- merge(zcta_within, zcta_o3_cmaq, by="GEOID10")
+zcta_o3 <- merge(zcta, zcta_o3_cmaq, by="GEOID10")
+zcta_within_o3 <- merge(zcta_within, zcta_o3_cmaq, by="GEOID10")
 
-temp <- spplot(zcta_pm, "wt_conc",
+temp <- spplot(zcta_o3, "wt_conc",
                main="Predicted monthly average O3 (ppb)\n(ZCTA level using zonal statistics)")
 jpeg(filename= "./Maps/ALA Meeting/ZCTA Monthly O3.jpeg")
 print(temp)
 dev.off()
 
-spplot(zcta_within_pm, "wt_conc",
+spplot(zcta_within_o3, "wt_conc",
        main="Predicted monthly average O3\n(ZCTAs completely within the modeling domain)")
 
 #' -----------------------------------------------------------------------------
@@ -672,7 +671,11 @@ crs(monitors) <- CRS(ll_wgs84)
 monitors@data <- monitors_df
 
 monitors
+monitors <- monitors[which(monitors$parameter %in% c(88101, 44201)),]
 monitors@data
+
+monitors@data$site_id <- c("Manitou Springs", "Air Force Academy", 
+                           "Colorado College", "Fountain School")
 
 #' Map of study area ZCTAs, CAMQ grid, and AQS monitors
 base_map <- get_map(location=bbox(zcta), maptype="terrain",
@@ -703,6 +706,9 @@ area_map <- ggmap(base_map) +
   geom_point(data=as.data.frame(monitors), 
              aes(x=lon, y=lat, color="monitor", shape="monitor"),
              cex=3.5) +
+  geom_label_repel(data=as.data.frame(monitors), 
+             aes(x=lon, y=lat, label=site_id),
+             cex=3.5, segment.size = 1) +
   scale_color_manual(values=c("cmaq" = "red", "monitor" = "blue"),
                      labels=c("CMAQ receptors", "AQS Monitors"),
                      name="") +
@@ -724,6 +730,7 @@ aqs_summary <- aqs %>%
   group_by(site, parameter) %>%
   summarise(measured_mean = mean(value, na.rm=T),
             measured_sd = sd(value, na.rm=T))
+aqs_summary
 
 #' Extract monthly average from smoothed surfaces and ZCTA averages
 monitors2 <- merge(monitors, aqs_summary, by=c("site", "parameter"))
@@ -743,14 +750,14 @@ pm2.5_monitors@data
 #' Fewer days measured, though there shouldn't be so much day to day variability
 #' as to nearly triple the monthly average
 #' Could we be looking at PM10?
-pm10_monitors <- monitors2[which(monitors2$parameter == 81102),]
-pm10_monitors <- raster::extract(cmaq_pm_r, pm10_monitors, sp=T)
-colnames(pm10_monitors@data)[ncol(pm10_monitors@data)] <- "smoothed_mean"
-
-pm10_zcta <- sp::over(pm10_monitors, zcta_pm)
-pm10_monitors$zcta_mean <- pm10_zcta[,"wt_conc"]
-
-pm10_monitors@data
+# pm10_monitors <- monitors2[which(monitors2$parameter == 81102),]
+# pm10_monitors <- raster::extract(cmaq_pm_r, pm10_monitors, sp=T)
+# colnames(pm10_monitors@data)[ncol(pm10_monitors@data)] <- "smoothed_mean"
+# 
+# pm10_zcta <- sp::over(pm10_monitors, zcta_pm)
+# pm10_monitors$zcta_mean <- pm10_zcta[,"wt_conc"]
+# 
+# pm10_monitors@data
 
 #' Ozone
 o3_monitors <- monitors2[which(monitors2$parameter == 44201),]
@@ -762,9 +769,7 @@ o3_monitors$zcta_mean <- o3_zcta[,"wt_conc"]
 
 o3_monitors@data
 
-monitors3 <- spRbind(pm2.5_monitors, pm10_monitors)
-monitors3 <- spRbind(monitors3, o3_monitors)
-
+monitors3 <- spRbind(pm2.5_monitors, o3_monitors)
 monitors3@data
 
 monitors_sum <- as.data.frame(monitors3) %>%

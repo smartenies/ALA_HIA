@@ -19,21 +19,8 @@
 #' -----------------------------------------------------------------------------
 
 #' -----------------------------------------------------------------------------
-#' Read in the CMAQ data and get the coordinates
-#' Ali has generated a netcdf file for one month--- will use to get the coords
-#' Later, the CMAQ output will be specified in the Master script
+#' Read in the CMAQ data and get the receptor coordinates
 #' -----------------------------------------------------------------------------
-
-#' Population weighting  and exposure assessment setup:
-cmaq_out <- "southern_colorado.nc"
-pop_den_tif <- "2010-COloradoPopDensity.tif"
-
-#' Unique prefix for all the output files in this test
-pre <- "jan_2011_test_"
-
-#' CMAQ start date:
-start_date <- as.Date("01-01-2011", format="%m-%d-%Y")
-
 
 #' Open the netcdf file
 #' Has 4 dimensions: lat, long, hour, and day in GMT
@@ -122,8 +109,9 @@ array_to_df <- function (nc, coord_df) {
 }
 
 #' 4-D arrays to list of data frames for summarizing below
+#' Convert O3 from ppm to ppb
 df_list <- list("pm" = array_to_df(nc = cmaq_pm, coord_df = lon_lat),
-                "o3" = array_to_df(nc = cmaq_o3, coord_df = lon_lat))
+                "o3" = array_to_df(nc = cmaq_o3*1000, coord_df = lon_lat))
 
 rm(cmaq, cmaq_pm, cmaq_o3, lon_lat, cmaq_o3_fill, cmaq_pm_fill)
 
@@ -266,13 +254,14 @@ for (i in 1:length(df_list)) {
 
 #' Clean up environment
 rm(df, df_name, rec, temp, a, b, avg_list, col_ids, conc, date_seq,
-   day_list, days, hours, i, j, k, l, max, n, n_days_o3, n_days_pm,
-   name)
+   day_list, days, hours, i, j, k, l, max, n, name)
 
 #' -----------------------------------------------------------------------------
 #' Interpolate CMAQ concentrations to the 1 k populaton density grid and use
 #' zonal statistics to get the average value for the ZCTAs weighted by area and
 #' population density
+#' 
+#' Takes a bit of time, but gives decent estimates
 #' 
 #' 1) Read in the SEDAC population density grid
 #'     Going to use 2010 since we'll be modeling 2011 as the baseline year and
@@ -390,8 +379,7 @@ pol_names <- c("pm", "o3")
 #' loop through each pollutant and metric
 a2 <- Sys.time()
 
-#for (i in 1:length(pol_names)) {
-for (i in 2:length(pol_names)) {
+for (i in 1:length(pol_names)) {
 
   #' read in data
   load(paste("./HIA Inputs/", pre, pol_names[i], "_receptor_metrics.RData", 
@@ -405,6 +393,7 @@ for (i in 2:length(pol_names)) {
   metrics
   
   zcta_list <- list()
+  
   for (j in 1:length(metrics)) {
     
     #' extract data frame from list
@@ -417,17 +406,21 @@ for (i in 2:length(pol_names)) {
     test_p@data <- test_df
     
     #' list of days to loop through
-    days <- unique(test_p$day)
+    days <- sort(as.integer(unique(test_p$day)))
     met_df <- data.frame()
     
     #' krige cmaq points to the grid
     for (k in 1:length(days)) {
       
-      print(paste("Metric ", j, " of ", length(metrics), 
+      print(paste("Pollutant ", i, " of ", length(pol_names), 
+                  "; Metric ", j, " of ", length(metrics), 
                   "; Day ", k, " of ", length(days), sep=""))
       
       #' subset to daily metric
       test_p_2 <- test_p[which(test_p$day == days[k]),]
+      
+      #' If there are missing values, skip this iteration
+      if (anyNA(as.data.frame(test_p_2[,metrics[j]]))) next 
       
       #' Create a smooth surface using ordinary kriging
       cmaq_vgm <- variogram(get(metrics[j]) ~ 1, test_p_2) #'generate the semivariogram
@@ -437,7 +430,7 @@ for (i in 2:length(pol_names)) {
       
       #' Fitting the semivariogram
       cmaq_fit <- fit.variogram(cmaq_vgm, 
-                                model=vgm(c("Sph", "Exp", "Gau", "Wav", "Per", 
+                                model=vgm(c("Sph", "Exp", "Gau", "Wav", "Exc", 
                                             "Ste", "Bes", "Mat", "Cir", "Pen"))) 
       cmaq_fit 
       
@@ -508,3 +501,5 @@ for (i in 2:length(pol_names)) {
   rm(zcta_list)
 }
 
+#' Time to summarize ZCTA exposures:
+Sys.time() - a2

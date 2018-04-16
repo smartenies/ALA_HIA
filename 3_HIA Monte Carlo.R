@@ -21,7 +21,7 @@ start_time <- Sys.time()
 sim_seed <- 1234
 
 # Set number of iterations
-n <- 10000
+n <- 1000
 
 #' load the HIA databases
 cr <- read.table(cr_file, header=T, stringsAsFactors = F)
@@ -29,8 +29,9 @@ pop <- read.table(pop_file, header = T, stringsAsFactors = F)
 rate <- read.table(rate_file, header=T, stringsAsFactors = F)
 
 #' subset CR dataframe to only include outcomes for which we have rates
-r_out <- unique(gsub("_se", "", colnames(rate)))[-c(1, 17)]
+r_out <- unique(gsub("_se", "", colnames(rate)))
 cr <- cr[which(cr$outcome %in% r_out),]
+cr <- cr[which(cr$outcome != "hosp_mi"),]
 
 #' load the ZCTA file
 load("./HIA Inputs/zcta.RData")
@@ -45,9 +46,8 @@ out_df <- data.frame()
 #' set the see for generating all the distributions
 set.seed(sim_seed)
 
-#for (i in 1:length(pol_names)) {
-for (i in 1:1) {
-  
+for (i in 1:length(pol_names)) {
+
   #' load ZCTA exposures
   load(paste("./HIA Inputs/", pre, pol_names[i], "_zcta_metrics.RData",sep=""))
   
@@ -60,12 +60,17 @@ for (i in 1:1) {
     
     #' Get subset of concentration-response coefficients
     m_cr <- cr[which(cr$pol == pol_names[i] & cr$metric == metrics[j]),]
+    if(nrow(m_cr)==0) next
     
     #' Get list of outcomes
     outcomes <- unique(m_cr$outcome)
 
     #' Loop through outcomes
     for (k in 1:length(outcomes)) {
+      
+      print(paste("Pollutant ", i, " of ", length(pol_names), 
+                  "; Metric ", j, " of ", length(metrics), 
+                  "; Outcome ", k, " of ", length(outcomes), sep=""))
       
       #' CR coefficient (same distribution for all ZCTAs)
       beta <- m_cr[which(m_cr$outcome==outcomes[k]), "cr_beta"]
@@ -175,8 +180,8 @@ total_df <- out_df %>%
             p97.5_scaled = round(sum(p97.5_scaled, na.rm=T),0))
   
 save(out_df, total_df,
-     file=paste("./HIA Outputs/", pre, pol_names[i], "_zcta_impacts.RData",sep=""))
+     file=paste("./HIA Outputs/", pre, "zcta_impacts.RData",sep=""))
 write.csv(total_df,
-          file=paste("./HIA Outputs/", pre, pol_names[i], "_zcta_impacts.csv",sep=""))  
+          file=paste("./HIA Outputs/", pre, "zcta_impacts.csv",sep=""))  
   
   
