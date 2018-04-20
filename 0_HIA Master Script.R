@@ -16,17 +16,19 @@
 #' BEFORE RUNNING THIS CODE, SET THE ANALYSIS UP IN THE HEADER
 #' -----------------------------------------------------------------------------
 
+source("1_HIA Header.R", local=T)
+
 #' Pool the CRs
-source("0_HIA CR Pooling.R")
+source("2_HIA CR Pooling.R")
 
 #' summarize population estimates
-source("0_Population Estimates.R")
+source("2_Population Estimates.R")
 
 #' Compile the HIA databases
-source("0_HIA Databases.R")
+source("2_HIA Databases.R")
 
 #' Assess exposures at the ZCTA level
-source("2_HIA Header.R", local=T)
 source("3_HIA Exp Assessment.R", local=T)
-source("2_HIA Header.R", local=T)
+
+#' Run the MC analysis
 source("4_HIA Monte Carlo.R", local=T)

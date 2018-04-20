@@ -14,6 +14,7 @@ library(ggthemes)
 library(ncdf4)
 library(tidyverse)
 library(Hmisc)
+library(writexl)
 
 #' For ggplots
 simple_theme <- theme(
@@ -46,7 +47,7 @@ ll_wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 #' Population weighting  and exposure assessment setup:
 cmaq_scenario <- "southern_colorado.nc"
-cmaq_baseline <- NA
+cmaq_background <- NA
 pop_den_tif <- "2010-COloradoPopDensity.tif"
 
 #' CMAQ start date:
@@ -57,6 +58,12 @@ pre <- "jan_2011_test_"
 
 #' How many days should be used to scale the modeled estimates?
 d_per_y <- 365
+
+#' how many iterations should be used in the MC?
+mc_n <- 1000
+
+#" Set seed 
+sim_seed <- 1234
 
 #' HIA inputs:
 cr_file <- "./HIA Inputs/CR.txt"

@@ -14,25 +14,6 @@
 #' This script generates the pppd, CR and valuation databases used in the HIA
 #' =============================================================================
 
-library(foreign)
-library(sp)
-library(Hmisc)
-library(gstat)
-library(rgdal)
-library(ggplot2)
-library(ggmap)
-library(scales)
-library(ggsn)
-library(raster)
-library(rgeos)
-library(maptools)
-library(ggthemes)
-library(ggrepel)
-library(RColorBrewer)
-library(gridExtra)
-library(plyr)
-library(stringr)
-library(readxl)
 
 #' -----------------------------------------------------------------------------
 #' get the list of ZCTAs in Colorado
@@ -136,3 +117,8 @@ cr <- merge(pooled_crs, values, by="outcome", all.x=T)
 cr <- cr[,c("outcome", "pol", "metric", "age_group", "cr_beta", "cr_se", "value_2024")]
 
 write.table(cr, "./HIA Inputs/CR.txt", row.names = F)
+
+
+#' Clean up environment
+rm(cr, hosp, morb, morb_pppd, morb_se, morb2, mort, out_df, pooled_crs, 
+   pppd, values, outcomes, zcta)

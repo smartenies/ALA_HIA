@@ -19,8 +19,74 @@
 #' -----------------------------------------------------------------------------
 
 #' -----------------------------------------------------------------------------
-#' Read in the CMAQ data, get the receptor coordinates, and create data frame
+#' Read in the CMAQ data and get the receptor coordinates
 #' -----------------------------------------------------------------------------
+
+#' Open the netcdf file
+#' Has 4 dimensions: lat, long, hour, and day in GMT
+#' Has 4 variables: lat, long, ozone, pm
+
+cmaq_name <- paste("./Data/CMAQ Data/", cmaq_out, sep="")
+cmaq <- nc_open(cmaq_name)
+print(cmaq)
+
+#' Extract coordinates
+cmaq_lon <- ncvar_get(cmaq, varid="lon")
+cmaq_lat <- ncvar_get(cmaq, varid="lat")
+
+#' Extract variables
+#' Dimensions: lat (19 rows), long (30 columns), hour (24), day (30)
+cmaq_pm <- ncvar_get(cmaq, varid="pm")
+cmaq_o3 <- ncvar_get(cmaq, varid="ozone")
+
+dim(cmaq_pm)
+dim(cmaq_o3)
+
+n_days_pm <- dim(cmaq_pm)[4]
+n_days_o3 <- dim(cmaq_o3)[4]
+
+#' What is the "fillvalue" for the data?
+cmaq_pm_fill <- ncatt_get(cmaq, "pm", "_FillValue")
+cmaq_o3_fill <- ncatt_get(cmaq, "ozone", "_FillValue")
+
+#' set fill values to NA
+cmaq_pm[cmaq_pm == cmaq_pm_fill$value] <- NA
+cmaq_o3[cmaq_o3 == cmaq_o3_fill$value] <- NA
+
+#' close the netcdf file
+nc_close(cmaq)
+
+#' Create receptor data frame with ID 
+cmaq_df <- data.frame(lon = as.vector(cmaq_lon),
+                      lat = as.vector(cmaq_lat))
+cmaq_df$id <- seq(1:nrow(cmaq_df))
+
+#' plot grid cell centroids 
+#' The grid of points is "irregular" due to the geographic coordinate system 
+ggplot(cmaq_df) +
+  geom_point(aes(x=lon, y=lat)) +
+  simple_theme
+#head(cmaq_df)
+
+#' Create a spatial points DF from the CMAQ coordinates
+cmaq_p <- cmaq_df
+coordinates(cmaq_p) <- c("lon", "lat")
+proj4string(cmaq_p) <- CRS(ll_wgs84)
+cmaq_p
+cmaq_p@data <- cmaq_df
+
+#' get the extent of the grid
+cmaq_e <- extent(cmaq_p)
+cmaq_e
+
+#' -----------------------------------------------------------------------------
+#' Create data frames of hourly data at each receptor for analysis
+#' -----------------------------------------------------------------------------
+
+#' matrix of grid cell coordinates
+lon_lat <- data.frame("lon" = as.vector(cmaq_lon),
+                      "lat" = as.vector(cmaq_lat))
+dim(lon_lat)
 
 #' function to convert the 4d array into a data frame
 array_to_df <- function (nc, coord_df) {
@@ -42,87 +108,21 @@ array_to_df <- function (nc, coord_df) {
   return(pol_df)
 }
 
-#' Function to open the netCDF and output a data frame 
-cmaq_data_output <- function(cmaq_data) {
-  cmaq_name <- paste("./Data/CMAQ Data/", cmaq_data, sep="")
-  cmaq <- nc_open(cmaq_name)
-  print(cmaq)
-  
-  #' Extract coordinates
-  cmaq_lon <- ncvar_get(cmaq, varid="lon")
-  cmaq_lat <- ncvar_get(cmaq, varid="lat")
-  
-  #' Extract variables
-  #' Dimensions: lat (19 rows), long (30 columns), hour (24), day (30)
-  cmaq_pm <- ncvar_get(cmaq, varid="pm")
-  cmaq_o3 <- ncvar_get(cmaq, varid="ozone")
-  
-  dim(cmaq_pm)
-  dim(cmaq_o3)
-  
-  n_days_pm <- dim(cmaq_pm)[4]
-  n_days_o3 <- dim(cmaq_o3)[4]
-  
-  #' What is the "fillvalue" for the data?
-  cmaq_pm_fill <- ncatt_get(cmaq, "pm", "_FillValue")
-  cmaq_o3_fill <- ncatt_get(cmaq, "ozone", "_FillValue")
-  
-  #' set fill values to NA
-  cmaq_pm[cmaq_pm == cmaq_pm_fill$value] <- NA
-  cmaq_o3[cmaq_o3 == cmaq_o3_fill$value] <- NA
-  
-  #' close the netcdf file
-  nc_close(cmaq)
-  
-  #' Create receptor data frame with ID 
-  cmaq_df <- data.frame(lon = as.vector(cmaq_lon),
-                        lat = as.vector(cmaq_lat))
-  cmaq_df$id <- seq(1:nrow(cmaq_df))
-  
-  #' Create a spatial points DF from the CMAQ coordinates
-  cmaq_p <- cmaq_df
-  coordinates(cmaq_p) <- c("lon", "lat")
-  proj4string(cmaq_p) <- CRS(ll_wgs84)
-  cmaq_p
-  cmaq_p@data <- cmaq_df
-  
-  #' get the extent of the grid
-  cmaq_e <- extent(cmaq_p)
-  cmaq_e
-  
-  #' matrix of grid cell coordinates
-  lon_lat <- data.frame("lon" = as.vector(cmaq_lon),
-                        "lat" = as.vector(cmaq_lat))
-  dim(lon_lat)
-  
-  #' 4-D arrays to list of data frames for summarizing below
-  #' Convert O3 from ppm to ppb
-  df_list <- list("pm" = array_to_df(nc = cmaq_pm, coord_df = lon_lat),
-                  "o3" = array_to_df(nc = cmaq_o3*1000, coord_df = lon_lat))
-  
-  return(df_list)
-  rm(cmaq, cmaq_pm, cmaq_o3, lon_lat, cmaq_o3_fill, cmaq_pm_fill)
-}
+#' 4-D arrays to list of data frames for summarizing below
+#' Convert O3 from ppm to ppb
+df_list <- list("pm" = array_to_df(nc = cmaq_pm, coord_df = lon_lat),
+                "o3" = array_to_df(nc = cmaq_o3*1000, coord_df = lon_lat))
 
-scenario <- cmaq_data_output(cmaq_data = cmaq_scenario)
-
-if (!(is.na(cmaq_baseline))) {
-  #' get background data frame
-  background <- cmaq_data_output(cmaq_data = cmaq_background)
-  
-  #' subtract background values from scenario values
-  scenario[[1]]$value <- scenario[[1]]$value - background[[1]]$value
-  scenario[[2]]$value <- scenario[[2]]$value - background[[2]]$value
-}
+rm(cmaq, cmaq_pm, cmaq_o3, lon_lat, cmaq_o3_fill, cmaq_pm_fill)
 
 #' -----------------------------------------------------------------------------
 #' Calculate annual and daily metrics for each pollutant
 #' -----------------------------------------------------------------------------
 date_seq <- seq.Date(from = start_date, length.out = n_days_pm, by="days")
 
-for (i in 1:length(scenario)) {
-  df <- scenario[[i]]
-  df_name <- names(scenario)[i]
+for (i in 1:length(df_list)) {
+  df <- df_list[[i]]
+  df_name <- names(df_list)[i]
   
   #' Set up the data frame
   #' add an arbitrary receptor ID and then add back the coordinates later

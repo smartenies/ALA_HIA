@@ -16,15 +16,9 @@
 #' on Ryan Gan's ozone HIA)
 #' =============================================================================
 
-start_time <- Sys.time()
-# Set seed 
-sim_seed <- 1234
-
-# Set number of iterations
-n <- 1000
-
 #' load the HIA databases
 cr <- read.table(cr_file, header=T, stringsAsFactors = F)
+values <- cr[,c("outcome", "value_2024")]
 pop <- read.table(pop_file, header = T, stringsAsFactors = F) 
 rate <- read.table(rate_file, header=T, stringsAsFactors = F)
 
@@ -75,7 +69,7 @@ for (i in 1:length(pol_names)) {
       #' CR coefficient (same distribution for all ZCTAs)
       beta <- m_cr[which(m_cr$outcome==outcomes[k]), "cr_beta"]
       beta_se <- m_cr[which(m_cr$outcome==outcomes[k]), "cr_se"]
-      beta_dist <- rnorm(n, mean = beta, sd = beta_se)
+      beta_dist <- rnorm(n = mc_n, mean = beta, sd = beta_se)
       # ggplot(data = as.data.frame(beta_dist), aes(x=beta_dist)) +
       #   geom_density() +
       #   simple_theme
@@ -106,14 +100,14 @@ for (i in 1:length(pol_names)) {
         if (is.na(y0_se)) {
           y0_dist <- y0
         } else {
-          y0_dist <- rnorm(n, mean = y0, sd = y0_se)
+          y0_dist <- rnorm(n = mc_n, mean = y0, sd = y0_se)
         }
         
         #' Population at risk
         age <- m_cr[which(m_cr$outcome == outcomes[k]), "age_group"]
         risk <- pop[which(pop$GEOID == zctas[l]), age]
         risk_se <- pop[which(pop$GEOID == zctas[l]), paste(age, "se", sep="_")]
-        risk_dist <- rnorm(n, mean = risk, sd = risk_se)
+        risk_dist <- rnorm(n = mc_n, mean = risk, sd = risk_se)
         
         #' Loop through days
         days <- unique(zcta_exp$day) 
@@ -126,10 +120,10 @@ for (i in 1:length(pol_names)) {
           exp <- as.numeric(exp_df[which(exp_df$GEOID10==zctas[l]), "wt_conc"])
           exp_sd <- as.numeric(exp_df[which(exp_df$GEOID10==zctas[l]), "wt_conc_sd"])
           
-          exp_dist <- rnorm(n, mean = exp, sd = exp_sd)
+          exp_dist <- rnorm(n = mc_n, mean = exp, sd = exp_sd)
           
           #' loop through n iterations of the MC
-          for (p in 1:n) {
+          for (p in 1:mc_n) {
             n_beta <- sample(beta_dist, 1, replace = T)
             n_y0 <- sample(y0_dist, 1, replace = T)
             n_exp <- sample(exp_dist, 1, replace = T)
@@ -165,11 +159,14 @@ for (i in 1:length(pol_names)) {
   }
 }
 
-#' How long did this take?
-Sys.time() - start_time
-
-#' Summarize by pollutant and outcome
+#' Valuate the impacts and summarize by pollutant and outcome
 detach(package:plyr)
+out_df$outcome <- as.character(out_df$outcome)
+out_df <- left_join(out_df, values, by="outcome") %>%
+  mutate(median_value = median_scaled * value_2024,
+         p2.5_value = p2.5_scaled * value_2024,
+         p97.5_value = p97.5_scaled * value_2024)
+
 total_df <- out_df %>%
   group_by(pol, outcome) %>%
   summarise(median = round(sum(median, na.rm=T),2),
@@ -177,11 +174,14 @@ total_df <- out_df %>%
             p97.5 = round(sum(p97.5, na.rm=T),2),
             median_scaled = round(sum(median_scaled, na.rm=T),0),
             p2.5_scaled = round(sum(p2.5_scaled, na.rm=T),0),
-            p97.5_scaled = round(sum(p97.5_scaled, na.rm=T),0))
+            p97.5_scaled = round(sum(p97.5_scaled, na.rm=T),0),
+            median_value = round(sum(median_value, na.rm=T),0),
+            p2.5_value = round(sum(p2.5_value, na.rm=T),0),
+            p97.5_value = round(sum(p97.5_value, na.rm=T),0))
   
 save(out_df, total_df,
      file=paste("./HIA Outputs/", pre, "zcta_impacts.RData",sep=""))
-write.csv(total_df,
-          file=paste("./HIA Outputs/", pre, "zcta_impacts.csv",sep=""))  
+write_xlsx(total_df,
+           path=paste("./HIA Outputs/", pre, "zcta_impacts.xlsx",sep=""))  
   
   

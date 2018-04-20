@@ -19,43 +19,6 @@
 #' using the description in the 2012 EPA RIA for the PM2.5 NAAQS (5-44)
 #' =============================================================================
 
-library(foreign)
-library(sp)
-library(Hmisc)
-library(gstat)
-library(rgdal)
-library(ggplot2)
-library(ggmap)
-library(raster)
-library(rgeos)
-library(maptools)
-library(ggthemes)
-library(ggrepel)
-library(RColorBrewer)
-library(gridExtra)
-library(plyr)
-library(stringr)
-library(readxl)
-
-#' For ggplots
-simple_theme <- theme(
-  #aspect.ratio = 1,
-  text  = element_text(family="Calibri",size = 12, color = 'black'),
-  panel.spacing.y = unit(0,"cm"),
-  panel.spacing.x = unit(0.25, "lines"),
-  panel.grid.minor = element_blank(),
-  panel.grid.major = element_blank(),
-  panel.border=element_rect(fill = NA),
-  panel.background=element_blank(),
-  axis.ticks = element_line(colour = "black"),
-  axis.text = element_text(color = "black", size=10),
-  # legend.position = c(0.1,0.1),
-  plot.margin=grid::unit(c(0,0,0,0), "mm"),
-  legend.key = element_blank()
-)
-windowsFonts(Calibri=windowsFont("TT Calibri"))
-options(scipen = 9999) #avoid scientific notation
-
 #' =============================================================================
 #' Read in the datasets and subset by pollutant and metric
 #' =============================================================================
@@ -183,7 +146,10 @@ save(pooled_crs, file="./Data/Pooled CRs.RData")
 write.csv(pooled_crs, file="./Data/Pooled CRs.csv",
           row.names = F)
   
-  
+#' Clean up environment
+rm(ast_outcomes1, ast_outcomes2, i, j, k, metrics, outcomes, pols,
+   rma_model, rma_model1, rma_model2, cr_df, df, full_cr, met_df,
+   o3_cr, pm_ast_cr1, pm_ast_cr2, pm_cr, pooled_crs)  
   
   
 
