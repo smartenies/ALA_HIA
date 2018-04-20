@@ -40,27 +40,3 @@ utm_13 <- "+init=epsg:26913"
 ll_nad83 <- "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
 ll_wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
-#' -----------------------------------------------------------------------------
-#' Designate the path, input, and output names for this run 
-#' -----------------------------------------------------------------------------
-
-#' Population weighting  and exposure assessment setup:
-cmaq_out <- "southern_colorado.nc"
-pop_den_tif <- "2010-COloradoPopDensity.tif"
-
-#' Unique prefix for all the output files in this test
-pre <- "jan_2011_test_"
-
-#' CMAQ start date:
-start_date <- as.Date("01-01-2011", format="%m-%d-%Y")
-
-#' How many days should be used to scale the modeled estimates?
-d_per_y <- 365
-
-#' HIA inputs:
-cr_file <- "./HIA Inputs/CR.txt"
-pop_file <- "./HIA Inputs/population.txt"
-rate_file <- "./HIA Inputs/rates.txt"
-
-#' Outputs:
-out_path <- "./HIA Outputs/"
