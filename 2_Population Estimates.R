@@ -41,16 +41,6 @@ zcta <- unique(as.character(co_zcta_utm$GEOID_Data))
 
 rm(co_zcta_utm, co_zcta_utm_map, co_zcta)
 
-# # load the outcome age groups and values
-# values <- read.table("./Data/Ages and Values.txt", header=T,
-#                      stringsAsFactors = F)
-# values$age_group <- gsub("-", "_", values$age_group)
-# 
-# ages <- paste("p", unique(values$age_group), sep="")
-# ages_se <- paste(age_groups, "_se", sep="")
-# age_groups <- c("GEOID", "total", "total_se", age_groups, age_groups_se)
-# age_groups <- age_groups[order(age_groups)]
-
 #' -----------------------------------------------------------------------------
 #' Creating the population database
 #' 

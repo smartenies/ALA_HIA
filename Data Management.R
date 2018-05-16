@@ -49,7 +49,7 @@ simple_theme <- theme(
 windowsFonts(Calibri=windowsFont("TT Calibri"))
 options(scipen = 9999) #avoid scientific notation
 
-geo_data <- "C:/Users/semarten/Documents/Geodatabases"
+geo_data <- "T:/Rsch-MRS/ECHO/SEM Large Data/Spatial Data"
 
 #' =============================================================================
 #' Object for the location of the power plants
@@ -66,9 +66,10 @@ proj4string(pp) <- CRS("+init=epsg:4326")
 pp_utm <- spTransform(pp, CRS("+init=epsg:26913"))
 pp_df <- as.data.frame(pp_utm)
 
-points(pp_utm, col="red", pch=16)
+plot(pp_utm, col="red", pch=16)
 
 save(pp_utm, pp_df, file="./Data/Spatial Data/power_plants_utm.RData")
+save(pp_utm, file="./HIA Inputs/power_plants.RData")
 
 #' =============================================================================
 #' Census tract shapefiles and spatial objects for R
@@ -153,14 +154,14 @@ ggsave(area_map, filename = "./Maps/Study Area.jpeg", device = "jpeg",
 #' Based on the 3 km x 3 km grid Ryan Gan uses in the wildfires project
 #' =============================================================================
 
-h_grid <- readOGR(dsn = "./Data/Shapefiles", layer = "co_grid")
-summary(h_grid)
-save(h_grid, file="./Data/Spatial Data/3x3_grid_latlong.RData")
-
-proj4string(h_grid) <- CRS("+init=epsg:4326") #' long/lat
-
-h_grid_utm <- spTransform(h_grid, CRS("+init=epsg:26913")) #UTM 13N
-save(h_grid_utm, file="./Data/Spatial Data/3x3_grid_UTM.RData")
+# h_grid <- readOGR(dsn = "./Data/Shapefiles", layer = "co_grid")
+# summary(h_grid)
+# save(h_grid, file="./Data/Spatial Data/3x3_grid_latlong.RData")
+# 
+# proj4string(h_grid) <- CRS("+init=epsg:4326") #' long/lat
+# 
+# h_grid_utm <- spTransform(h_grid, CRS("+init=epsg:26913")) #UTM 13N
+# save(h_grid_utm, file="./Data/Spatial Data/3x3_grid_UTM.RData")
 
 #' =============================================================================
 #' ACS demographic and socioeconomic variables
@@ -337,4 +338,4 @@ ses_vars <- c("GEOID", "total_pop", "under_5", "pct_under5",
 acs <- acs[,c(1,11228:11253)]
 
 save(acs, file=paste("./Data/ACS_", years, "/ACS.RData", sep=""))
-
+write.table(acs, file="./HIA Inputs/ses indicators.txt")

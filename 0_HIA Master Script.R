@@ -32,3 +32,6 @@ source("3_HIA Exp Assessment.R", local=T)
 
 #' Run the MC analysis
 source("4_HIA Monte Carlo.R", local=T)
+
+#' Monetization and Inequality
+source("5_HIA Inequality.R", local=T)

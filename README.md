@@ -7,5 +7,5 @@ Health impact assessment sponsored by the American Lung Association evaluating t
 
 ## To Do List
 [X] Fix Monte Carlo code so that all outcomes are included
-[ ] Recode exposure assessment to take difference between two scenarios
+[X] Recode exposure assessment to take difference between two scenarios
 

@@ -15,6 +15,10 @@ library(ncdf4)
 library(tidyverse)
 library(Hmisc)
 library(writexl)
+library(sf)
+library(viridis)
+library(DescTools)
+library(IC2)
 
 #' For ggplots
 simple_theme <- theme(
@@ -56,6 +60,9 @@ start_date <- as.Date("01-01-2011", format="%m-%d-%Y")
 #' Unique prefix for all the output files in this test
 pre <- "jan_2011_test_"
 
+#' Population for mapping rates
+rate_pop <- 10000
+
 #' How many days should be used to scale the modeled estimates?
 d_per_y <- 365
 
@@ -69,6 +76,7 @@ sim_seed <- 1234
 cr_file <- "./HIA Inputs/CR.txt"
 pop_file <- "./HIA Inputs/population.txt"
 rate_file <- "./HIA Inputs/rates.txt"
+ses_file <- "./HIA Inputs/ses indicators.txt"
 
 #' Outputs:
 out_path <- "./HIA Outputs/"
