@@ -16,6 +16,8 @@
 #' BEFORE RUNNING THIS CODE, SET THE ANALYSIS UP IN THE HEADER
 #' -----------------------------------------------------------------------------
 
+start <- Sys.time()
+
 source("1_HIA Header.R", local=T)
 
 #' Pool the CRs
@@ -35,3 +37,5 @@ source("4_HIA Monte Carlo.R", local=T)
 
 #' Monetization and Inequality
 source("5_HIA Inequality.R", local=T)
+
+runtime <- Sys.time() - start

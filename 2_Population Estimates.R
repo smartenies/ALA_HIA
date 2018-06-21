@@ -15,26 +15,6 @@
 #' used to calculate rates and attributable health impacts
 #' =============================================================================
 
-library(foreign)
-library(sp)
-library(Hmisc)
-library(gstat)
-library(rgdal)
-library(ggplot2)
-library(ggmap)
-library(scales)
-library(ggsn)
-library(raster)
-library(rgeos)
-library(maptools)
-library(ggthemes)
-library(ggrepel)
-library(RColorBrewer)
-library(gridExtra)
-library(plyr)
-library(stringr)
-library(readxl)
-
 #' get the list of ZCTAs in Colorado
 co_zcta <- load("./Data/Spatial Data/co_zcta_utm_map.RData")
 zcta <- unique(as.character(co_zcta_utm$GEOID_Data))

@@ -43,8 +43,6 @@ save(pm_cr, o3_cr, full_cr, file="./Data/CR datasets.RData")
 
 load("./Data/CR datasets.RData")
 
-library(metafor)
-
 pols <- c("pm", "o3")
 
 pooled_crs <- data.frame(matrix(ncol=9, nrow=0))

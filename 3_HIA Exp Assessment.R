@@ -299,6 +299,8 @@ plot(pop_den_t)
 pop_den_r_1k <- crop(pop_den_t, cmaq_e)
 pop_den_r_1k
 
+plot(pop_den_r_1k)
+
 #' Overlay the CMAQ receptors with the population denisty raster
 plot(pop_den_r_1k)
 points(cmaq_p, pch=20, cex=0.5)
@@ -315,7 +317,6 @@ cmaq_r
 cmaq_g <- as(cmaq_r, "SpatialGrid")
 
 #' Get ZCTAs that are covered by the CAMQ raster
-
 #' Read in the ZCTA shapefile and make sure CRS matches
 co_zcta <- readOGR(dsn = geo_data, layer = "CO_ZCTA_2014")
 co_zcta <- spTransform(co_zcta, CRS=proj4string(pop_den_r_1k))
@@ -419,6 +420,19 @@ for (i in 1:length(pol_names)) {
       #' subset to daily metric
       test_p_2 <- test_p[which(test_p$day == days[k]),]
       
+      #' Plot for report
+      # test_p_sf <- st_as_sf(test_p_2)
+      # ggplot() +
+      #   ggtitle("A: CMAQ Receptor Concentrations") +
+      #   geom_sf(data = test_p_sf, aes(color=ann_mean)) +
+      #   geom_sf(data = st_as_sf(zcta), fill=NA, color="grey50") +
+      #   scale_color_continuous(name = "Concentration",
+      #                          low="yellow", high="red") +
+      #   theme(legend.position = "bottom") +
+      #   simple_theme
+      # ggsave(filename = "./Maps/For Report/CMAQ Receptors.jpeg",
+      #        device = "jpeg", dpi = 500)
+
       #' If there are missing values, skip this iteration
       if (anyNA(as.data.frame(test_p_2[,metrics[j]]))) next 
       
@@ -445,6 +459,19 @@ for (i in 1:length(pol_names)) {
              main = paste("pol= ", pol_names[i], ", met= ", metrics[j],
                           ", day= ", days[k], sep=""))
       
+      #' Plot for report
+      # test_ok_sf <- st_as_sf(as(cmaq_ok, "SpatialPointsDataFrame"))
+      # ggplot() +
+      #   ggtitle("B: Kriged 1 km Point Estimates") +
+      #   geom_sf(data = test_ok_sf, aes(color=var1.pred)) +
+      #   geom_sf(data = st_as_sf(zcta), fill=NA, color="grey50") +
+      #   scale_color_continuous(name = "Concentration",
+      #                          low="yellow", high="red") +
+      #   theme(legend.position = "bottom") +
+      #   simple_theme
+      # ggsave(filename = "./Maps/For Report/Kriged Receptors.jpeg",
+      #        device = "jpeg", dpi = 500)
+      
       #' Turn grid back into raster for zonal statistics
       cmaq_r <- raster(cmaq_ok)
       #cmaq_r
@@ -470,8 +497,23 @@ for (i in 1:length(pol_names)) {
         group_by(GEOID10) %>%
         summarise(wt_conc = wtd.mean(x = conc, weights = wt_prod),
                   wt_conc_sd = sqrt(wtd.var(x = conc, weights = wt_prod)))
-      #head(zcta_cmaq)
-      #summary(zcta_cmaq)
+      head(zcta_cmaq)
+      summary(zcta_cmaq)
+      
+      #' Plot for report
+      # test_zcta_sf <- st_as_sf(zcta) %>%
+      #   select(GEOID10) %>%
+      #   left_join(zcta_cmaq, by="GEOID10")
+      # ggplot() +
+      #   ggtitle("C: Population-weighted ZCTA Concentrations") +
+      #   geom_sf(data = test_zcta_sf, aes(fill=wt_conc)) +
+      #   geom_sf(data = st_as_sf(zcta), fill=NA, color="grey50") +
+      #   scale_fill_continuous(name = "Concentration",
+      #                          low="yellow", high="red") +
+      #   theme(legend.position = "bottom") +
+      #   simple_theme
+      # ggsave(filename = "./Maps/For Report/ZCTA Concentrations.jpeg",
+      #        device = "jpeg", dpi = 500)
       
       #' Plot exposure concentration
       #zcta_1 <- merge(zcta, zcta_cmaq, by="GEOID10")

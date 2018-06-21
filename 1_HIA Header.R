@@ -5,7 +5,6 @@ library(sp)
 library(gstat)
 library(rgdal)
 library(raster)
-library(spatialEco)
 library(ggplot2)
 library(ggmap)
 library(rgeos)
@@ -15,10 +14,14 @@ library(ncdf4)
 library(tidyverse)
 library(Hmisc)
 library(writexl)
+library(readxl)
 library(sf)
 library(viridis)
 library(DescTools)
 library(IC2)
+library(metafor)
+
+#detach("package:plyr", unload=TRUE)
 
 #' For ggplots
 simple_theme <- theme(
@@ -26,8 +29,8 @@ simple_theme <- theme(
   text  = element_text(family="Calibri",size = 12, color = 'black'),
   panel.spacing.y = unit(0,"cm"),
   panel.spacing.x = unit(0.25, "lines"),
-  panel.grid.minor = element_blank(),
-  panel.grid.major = element_blank(),
+  panel.grid.minor = element_line(color="transparent"),
+  panel.grid.major = element_line(colour="transparent"),
   panel.border=element_rect(fill = NA),
   panel.background=element_blank(),
   axis.ticks = element_line(colour = "black"),
