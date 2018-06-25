@@ -12,6 +12,7 @@ library(maptools)
 library(ggthemes)
 library(ncdf4)
 library(tidyverse)
+library(readxl)
 library(Hmisc)
 library(writexl)
 library(readxl)
@@ -53,6 +54,7 @@ ll_wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 #' -----------------------------------------------------------------------------
 
 #' Population weighting  and exposure assessment setup:
+#' If just doing total burden, set cmaq_background to NA
 cmaq_scenario <- "southern_colorado.nc"
 cmaq_background <- NA
 pop_den_tif <- "2010-COloradoPopDensity.tif"
