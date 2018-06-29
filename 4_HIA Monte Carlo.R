@@ -180,10 +180,11 @@ total_df <- out_df %>%
             median_value = round(sum(median_value, na.rm=T),0),
             p2.5_value = round(sum(p2.5_value, na.rm=T),0),
             p97.5_value = round(sum(p97.5_value, na.rm=T),0))
-  
+
 save(out_df, total_df,
      file=paste("./HIA Outputs/", pre[s], "zcta_impacts.RData",sep=""))
 write_xlsx(total_df,
-           path=paste("./HIA Outputs/", pre[s], "zcta_impacts.xlsx",sep=""))  
+           path=paste("./HIA Outputs/", pre[s], "zcta_impacts_summary.xlsx",
+                      sep=""))  
   
   
