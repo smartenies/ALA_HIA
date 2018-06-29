@@ -16,6 +16,8 @@
 #' on Ryan Gan's ozone HIA)
 #' =============================================================================
 
+print("HIA")
+
 #' load the HIA databases
 cr <- read.table(cr_file, header=T, stringsAsFactors = F)
 values <- cr[,c("outcome", "value_2024")]
@@ -28,7 +30,7 @@ cr <- cr[which(cr$outcome %in% r_out),]
 cr <- cr[which(cr$outcome != "hosp_mi"),]
 
 #' load the ZCTA file
-load("./HIA Inputs/zcta.RData")
+load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
 
 #' Loop through pollutants, metrics, and days to estimate attibutable health
 #' impacts, scaled to a full year
@@ -43,7 +45,7 @@ set.seed(sim_seed)
 for (i in 1:length(pol_names)) {
 
   #' load ZCTA exposures
-  load(paste("./HIA Inputs/", pre, pol_names[i], "_zcta_metrics.RData",sep=""))
+  load(paste("./HIA Inputs/", pre[s], pol_names[i], "_zcta_metrics.RData",sep=""))
   
   metrics <- names(zcta_list)
   
@@ -180,8 +182,8 @@ total_df <- out_df %>%
             p97.5_value = round(sum(p97.5_value, na.rm=T),0))
   
 save(out_df, total_df,
-     file=paste("./HIA Outputs/", pre, "zcta_impacts.RData",sep=""))
+     file=paste("./HIA Outputs/", pre[s], "zcta_impacts.RData",sep=""))
 write_xlsx(total_df,
-           path=paste("./HIA Outputs/", pre, "zcta_impacts.xlsx",sep=""))  
+           path=paste("./HIA Outputs/", pre[s], "zcta_impacts.xlsx",sep=""))  
   
   

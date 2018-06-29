@@ -19,19 +19,19 @@
 #' =============================================================================
 
 #' load the ZCTA file and the power plants
-load("./HIA Inputs/zcta.RData")
-load("./HIA Inputs/power_plants.RData")
+load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
+load("./Data/Spatial Data/power_plants.RData")
 
 #' load the impacts file
-load(paste("./HIA Outputs/", pre, "zcta_impacts.RData",sep=""))
+load(paste("./HIA Outputs/", pre[s], "zcta_impacts.RData",sep=""))
 out_df$zcta <- as.character(out_df$zcta)
   
 #' Load the inequality indicators
 ses <- read.table(ses_file, header=T, stringsAsFactors = F) %>%
   mutate(GEOID = gsub("86000US", "", GEOID)) %>%
   dplyr::rename(zcta = GEOID) %>%
-  select(zcta, total_pop, pct_poc, pct_less_hs, 
-         pct_limited_eng, pct_hh_pov, med_income)
+  dplyr::select(zcta, total_pop, pct_poc, pct_less_hs, 
+                pct_limited_eng, pct_hh_pov, med_income)
 
 #' Clean up median impacts and calculate rate
 impacts <- out_df %>%
@@ -41,16 +41,16 @@ impacts <- out_df %>%
   mutate(rate = (median_scaled / total_pop) * rate_pop) 
 
 #' Map outcome rates across ZCTA's
-zcta_sf <- st_as_sf(zcta) %>%
+load("./Data/Spatial Data/co_zcta") 
+
+zcta_sf <- filter(co_zcta, GEOID10 %in% zcta$GEOID10) %>%
   dplyr::rename(zcta = GEOID10) %>%
   select(zcta) %>%
   mutate(zcta = as.character(zcta)) %>%
   right_join(impacts, by="zcta")
 
-pp <- st_as_sf(pp_utm)
-
-if(exists(paste("./HIA Outputs/Maps/", pre, sep=""))==F) {
-  dir.create(paste("./HIA Outputs/Maps/", pre, sep=""))
+if(exists(paste("./HIA Outputs/Maps/", pre[s], sep=""))==F) {
+  dir.create(paste("./HIA Outputs/Maps/", pre[s], sep=""))
 } 
 
 for (i in 1:length(unique(zcta_sf$pol))) {
@@ -62,7 +62,7 @@ for (i in 1:length(unique(zcta_sf$pol))) {
       filter(outcome == unique(zcta_pol$outcome)[j]) %>%
       mutate(rate = ifelse(rate < 0, 0, rate))
     
-    ggplot(zcta_map) +
+    ggplot(data = zcta_map) +
       geom_sf(aes(fill = rate)) +
       geom_sf(data = pp, color = "red") +
       # stat_sf(data = pp, geom = "text")
@@ -70,7 +70,8 @@ for (i in 1:length(unique(zcta_sf$pol))) {
                                       unique(zcta_pol$outcome)[j], 
                                       "\nrate per ", rate_pop, sep="")) +
       simple_theme
-    ggsave(filename = paste("./HIA Outputs/Maps/", pre, "/", unique(zcta_sf$pol)[i],
+    ggsave(filename = paste("./HIA Outputs/Maps/", pre[s], "/", 
+                            unique(zcta_sf$pol)[i],
                             "_", unique(zcta_pol$outcome)[j], ".jpeg", sep=""),
            device = "jpeg", dpi = 600)
   }
@@ -101,8 +102,8 @@ concentration <- impacts2  %>%
   summarise(conc_index = calcSConc(rate, ses_value)[[1]][[1]]) 
 
 #' Generate concentration curves
-if(exists(paste("./HIA Outputs/CI Plots/", pre, sep=""))==F) {
-  dir.create(paste("./HIA Outputs/CI Plots/", pre, sep=""))
+if(exists(paste("./HIA Outputs/CI Plots/", pre[s], sep=""))==F) {
+  dir.create(paste("./HIA Outputs/CI Plots/", pre[s], sep=""))
 } 
 
 for (i in 1:length(unique(impacts2$pol))) {
@@ -138,9 +139,9 @@ colnames(inequality)[5:9] <- paste("CI_", colnames(inequality)[5:9], sep="")
 
 
 save(inequality,
-     file=paste("./HIA Outputs/", pre, "zcta_inequality.RData",sep=""))
+     file=paste("./HIA Outputs/", pre[s], "zcta_inequality.RData",sep=""))
 write_xlsx(inequality,
-           path=paste("./HIA Outputs/", pre, "zcta_inequality.xlsx",sep=""))  
+           path=paste("./HIA Outputs/", pre[s], "zcta_inequality.xlsx",sep=""))  
 
 
 

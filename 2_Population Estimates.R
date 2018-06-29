@@ -16,10 +16,10 @@
 #' =============================================================================
 
 #' get the list of ZCTAs in Colorado
-co_zcta <- load("./Data/Spatial Data/co_zcta_utm_map.RData")
-zcta <- unique(as.character(co_zcta_utm$GEOID_Data))
+load("./Data/Spatial Data/co_zcta.RData")
+zcta <- unique(as.character(co_zcta$GEOID_Data))
 
-rm(co_zcta_utm, co_zcta_utm_map, co_zcta)
+rm(co_zcta)
 
 #' -----------------------------------------------------------------------------
 #' Creating the population database

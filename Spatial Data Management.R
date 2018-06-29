@@ -1,6 +1,7 @@
 #' =============================================================================
 #' Project: American Lung Association HIA
 #' Date created: September 26, 2017
+#' Date Updated: June 26, 2018
 #' Author: Sheena Martenies
 #' Contact: Sheena.Martenies@colostate.edu
 #' 
@@ -10,23 +11,17 @@
 #' power plants in the front range region of CO: Comanche (in Pueblo, CO) and 
 #' Martin Drake (in Colorado Springs, CO). The facilities are slated to be 
 #' decommissioned by 2025.
+#' 
+#' This scrip specifies the spatial data used in the HIA
 #' =============================================================================
 
-library(foreign)
-library(sp)
+library(sf)
 library(Hmisc)
-library(gstat)
-library(rgdal)
 library(ggplot2)
-library(ggmap)
 library(raster)
 library(rgeos)
-library(maptools)
 library(ggthemes)
-library(ggrepel)
-library(RColorBrewer)
-library(gridExtra)
-library(plyr)
+library(dplyr)
 library(stringr)
 library(readxl)
 
@@ -37,7 +32,7 @@ simple_theme <- theme(
   panel.spacing.y = unit(0,"cm"),
   panel.spacing.x = unit(0.25, "lines"),
   panel.grid.minor = element_blank(),
-  panel.grid.major = element_blank(),
+  panel.grid.major = element_line(color="transparent"),
   panel.border=element_rect(fill = NA),
   panel.background=element_blank(),
   axis.ticks = element_line(colour = "black"),
@@ -49,7 +44,8 @@ simple_theme <- theme(
 windowsFonts(Calibri=windowsFont("TT Calibri"))
 options(scipen = 9999) #avoid scientific notation
 
-geo_data <- "T:/Rsch-MRS/ECHO/SEM Large Data/Spatial Data"
+geo_data <- "T:/Rsch-MRS/ECHO/SEM Large Data/Spatial Data/"
+albers <- "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
 
 #' =============================================================================
 #' Object for the location of the power plants
@@ -59,109 +55,65 @@ pp_df <- data.frame(id = c("Martin Drake", "Comanche"),
                     lat = c(38.8244, 38.2081),
                     long = c(-104.8331, -104.5747))
 
-pp <- pp_df
-coordinates(pp) <- c("long", "lat")
-proj4string(pp) <- CRS("+init=epsg:4326")
+pp <- st_as_sf(pp_df, coords=c("long", "lat"), crs = "+init=epsg:4326") %>%
+  st_transform(crs = albers)
 
-pp_utm <- spTransform(pp, CRS("+init=epsg:26913"))
-pp_df <- as.data.frame(pp_utm)
+plot(st_geometry(pp))
 
-plot(pp_utm, col="red", pch=16)
-
-save(pp_utm, pp_df, file="./Data/Spatial Data/power_plants_utm.RData")
-save(pp_utm, file="./HIA Inputs/power_plants.RData")
+save(pp, file="./Data/Spatial Data/power_plants.RData")
 
 #' =============================================================================
-#' Census tract shapefiles and spatial objects for R
-#' Use the "_map" objects for ggplots
+#' Census tract shapefiles and sf for R
 #' =============================================================================
 
 #' Colorado ZIP code tabulation areas
-co_zcta <- readOGR(dsn = geo_data, layer = "CO_ZCTA_2014")
-co_zcta$GEOID10 <- as.character(co_zcta$GEOID10)
-plot(co_zcta)
-save(co_zcta, file="./Data/Spatial Data/co_zcta_latlong.RData")
+co_zcta <- st_read(paste(geo_data, "CO_ZCTA_2014.shp", sep="")) %>%
+  mutate(GEOID10 = as.character(GEOID10)) %>%
+  st_transform(crs = albers)
 
-co_zcta_utm <- spTransform(co_zcta, CRS("+init=epsg:26913")) #UTM 13N
-co_zcta_utm@data$id <- rownames(co_zcta_utm@data)
-co_zcta_utm_polygons <- fortify(co_zcta_utm, region="id")
-co_zcta_utm_map <- merge(co_zcta_utm_polygons, co_zcta_utm@data, by="id")
-rm(co_zcta_utm_polygons)
-save(co_zcta_utm_map, co_zcta_utm, 
-     file="./Data/Spatial Data/co_zcta_utm_map.RData")
+plot(st_geometry(co_zcta))
+save(co_zcta, file="./Data/Spatial Data/co_zcta.RData")
 
-plot(co_zcta_utm)
-zcta_list <- as.character(co_zcta_utm@data$GEOID_Data)
-save(zcta_list, file="./Data/Spatial Data/zcta_list.RData")
+#' CO Counties
+co_counties <- st_read(paste(geo_data, "us_counties_2010.shp", sep="")) %>%
+select(GEOID10) %>% 
+  mutate(GEOID10 = as.character(GEOID10)) %>% 
+  mutate(state = substr(GEOID10, 1, 2)) %>%
+  filter(state == "08") %>%
+  st_transform(crs = albers)
+head(co_counties)
+plot(st_geometry(co_counties))
+
+save(co_counties, file="./Data/Spatial Data/co_counties.RData")
 
 #' Southern Front Range counties: Custer (027), El Paso (041), Fremont (043),
 #' Pueblo (101), Teller (119),
-
 sfr <- c("08027", "08041", "08043", "08101", "08119")
 
-counties <- readOGR(dsn = geo_data, layer = "us_counties_2010")
-counties@data$GEOID10 <- as.character(counties@data$GEOID10)
-counties@data$state <- substr(counties@data$GEOID10, 1, 2)
+sfr_counties <- filter(co_counties, GEOID10 %in% sfr) %>%
+  rename(county = GEOID10)
+plot(st_geometry(sfr_counties))
 
-co_counties <- counties[which(counties@data$state == "08"),]
-co_counties_utm <- spTransform(co_counties, CRS("+init=epsg:26913")) #UTM 13N
-co_counties_utm@data$id <- rownames(co_counties_utm@data)
-co_counties_utm_polygons <- fortify(co_counties_utm, region="id")
-co_counties_utm_map <- merge(co_counties_utm_polygons, 
-                             co_counties_utm@data, by="id")
-rm(co_counties_utm_polygons)
-save(co_counties_utm_map, co_counties_utm, 
-     file="./Data/Spatial Data/co_counties_utm_map.RData")
+save(sfr_counties, file="./Data/Spatial Data/sfr_counties.RData")
+  
+#' Southern Front Range ZCTAs
+sfr_zcta <- st_join(co_zcta, sfr_counties) %>%
+  filter(!is.na(county))
 
-sfr_counties <- co_counties[which(co_counties@data$GEOID %in% sfr),]
-sfr_counties_utm <- spTransform(sfr_counties, CRS("+init=epsg:26913")) #UTM 13N
-sfr_counties_utm@data$id <- rownames(sfr_counties_utm@data)
-sfr_counties_utm_polygons <- fortify(sfr_counties_utm, region="id")
-sfr_counties_utm_map <- merge(sfr_counties_utm_polygons, 
-                             sfr_counties_utm@data, by="id")
-rm(sfr_counties_utm_polygons)
-save(sfr_counties_utm_map, sfr_counties_utm, 
-     file="./Data/Spatial Data/sfr_counties_utm_map.RData")
+# sfr_zcta <- st_intersection(co_zcta, sfr_counties)
 
-sfr_zcta <- co_zcta[sfr_counties,]
-sfr_zcta_utm <- spTransform(sfr_zcta, CRS("+init=epsg:26913")) #UTM 13N
-#sfr_zcta <- gIntersection(co_zcta_utm, sfr_counties_utm, byid=T)
-sfr_zcta_utm@data$id <- rownames(sfr_zcta_utm@data)
-sfr_zcta_utm_polygons <- fortify(sfr_zcta_utm, region="id")
-sfr_zcta_utm_map <- merge(sfr_zcta_utm_polygons, sfr_zcta_utm@data, by="id")
-rm(sfr_zcta_utm_polygons)
-save(sfr_zcta_utm_map, sfr_zcta_utm, 
-     file="./Data/Spatial Data/sfr_zcta_utm_map.RData")
+save(sfr_zcta, file="./Data/Spatial Data/sfr_zcta.RData")
 
-area_map <- ggplot() +
+#' Map of the study area
+ggplot() +
   ggtitle("ZCTAs in the Southern Front Range area") +
-  geom_polygon(data=sfr_zcta_utm_map, aes(x=long/1000, y=lat/1000, 
-                                          group=group),
-               color="black", fill="lightblue", alpha=0.2) +
-  geom_polygon(data=sfr_counties_utm_map, aes(x=long/1000, y=lat/1000, 
-                                              group=group),
-               color="blue", fill=NA, size=1.5) +
-  geom_point(data=as.data.frame(pp_utm), aes(x=long/1000, y=lat/1000),
-             color="red", pch=16, cex=3) +
-  xlab("UTM X (km)") + ylab("UTM Y (km)") +
+  geom_sf(data=sfr_counties, color="red", fill=NA, size=1.5) +
+  geom_sf(data=sfr_zcta, color="black", fill="lightblue", alpha=0.2) +
+  geom_sf(data=pp, color="red", pch=16, cex=3) +
   simple_theme
-print(area_map)
-ggsave(area_map, filename = "./Maps/Study Area.jpeg", device = "jpeg", 
+ggsave(filename = "./Maps/Study Area.jpeg", device = "jpeg", 
        dpi=400, width = 7, height = 6, units="in")
 
-#' =============================================================================
-#' Grid for health data
-#' Based on the 3 km x 3 km grid Ryan Gan uses in the wildfires project
-#' =============================================================================
-
-# h_grid <- readOGR(dsn = "./Data/Shapefiles", layer = "co_grid")
-# summary(h_grid)
-# save(h_grid, file="./Data/Spatial Data/3x3_grid_latlong.RData")
-# 
-# proj4string(h_grid) <- CRS("+init=epsg:4326") #' long/lat
-# 
-# h_grid_utm <- spTransform(h_grid, CRS("+init=epsg:26913")) #UTM 13N
-# save(h_grid_utm, file="./Data/Spatial Data/3x3_grid_UTM.RData")
 
 #' =============================================================================
 #' ACS demographic and socioeconomic variables
@@ -174,7 +126,8 @@ ggsave(area_map, filename = "./Maps/Study Area.jpeg", device = "jpeg",
 #' Make sure there are no XML files in the data folder (they mess with the loop)
 #' -----------------------------------------------------------------------------
 
-load("./Data/Spatial Data/zcta_list.RData")
+load("./Data/Spatial Data/co_zcta.RData")
+zcta_list <- as.character(unique(co_zcta$GEOID10))
 years <- "2010_2014"
 
 file_list <- list.files(paste("./Data/ACS_", years, sep=""), pattern="X")
@@ -184,7 +137,7 @@ for (i in 1:length(file_list)){
   temp <- read.table(paste("./Data/ACS_", years, "/", file, sep=""),
                      header=TRUE, sep=",")
   temp$OBJECTID <-NULL
-  temp$GEOID <- as.character(temp$GEOID)
+  temp$GEOID <- gsub("86000US", "", as.character(temp$GEOID))
   temp <- temp[which(temp$GEOID %in% zcta_list),] # Just CO ZCTAs
   temp <- temp[order(temp$GEOID),]
   

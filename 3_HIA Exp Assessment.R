@@ -53,7 +53,7 @@ cmaq_data_output <- function(cmaq_data) {
   cmaq_lat <- ncvar_get(cmaq, varid="lat")
   
   #' Extract variables
-  #' Dimensions: lat (19 rows), long (30 columns), hour (24), day (30)
+  #' Dimensions: lat, long, , hour (n = 24), day 
   cmaq_pm <- ncvar_get(cmaq, varid="pm")
   cmaq_o3 <- ncvar_get(cmaq, varid="ozone")
   
@@ -104,30 +104,40 @@ cmaq_data_output <- function(cmaq_data) {
   rm(cmaq, cmaq_pm, cmaq_o3, lon_lat, cmaq_o3_fill, cmaq_pm_fill)
 }
 
-scenario <- cmaq_data_output(cmaq_data = cmaq_scenario)
+#' Get "baseline" concentrations and, if specified, subtract scenario
+baseline <- cmaq_data_output(cmaq_data = cmaq_baseline[s])
 
-if (!(is.na(cmaq_background))) {
-  #' get background data frame
-  background <- cmaq_data_output(cmaq_data = cmaq_background)
+if (!(is.na(cmaq_scenario[s]))) {
+  #' get scenario data frame
+  scenario <- cmaq_data_output(cmaq_data = cmaq_scenario[s])
   
-  if (all.equal(scenario[[1]]$day_UTC, background[[1]]$day_UTC) != T) stop()
+  if (all.equal(baseline[[1]]$day_UTC, scenario[[1]]$day_UTC) != T) stop()
   
-  #' subtract background values from scenario values
-  scenario[[1]]$value <- scenario[[1]]$value - background[[1]]$value
-  scenario[[2]]$value <- scenario[[2]]$value - background[[2]]$value
+  #' subtract scenario values from baseline values to get exposure differences
+  baseline[[1]]$value <- baseline[[1]]$value - scenario[[1]]$value
+  baseline[[2]]$value <- baseline[[2]]$value - scenario[[2]]$value
+  
+  rm(scenario)
 }
+
+
+save(baseline, file=paste("./HIA Inputs/", pre[s], "CMAQ_output.RData", sep=""))
 
 #' -----------------------------------------------------------------------------
 #' Calculate annual and daily metrics for each pollutant
 #' -----------------------------------------------------------------------------
 
-n_days_pm <- length(unique(scenario[[1]]$day_UTC))
-n_days_o3 <- length(unique(scenario[[1]]$day_UTC))
-date_seq <- seq.Date(from = start_date, length.out = n_days_pm, by="days")
+load(file=paste("./HIA Inputs/", pre[s], "CMAQ_output.RData", sep=""))
 
-for (i in 1:length(scenario)) {
-  df <- scenario[[i]]
-  df_name <- names(scenario)[i]
+#' Sequence of dates based on start date and end date
+date_seq <- seq.Date(from=start_dates[s], to=end_dates[s], by="day")
+
+for (i in 1:length(baseline)) {
+  df <- baseline[[i]]
+  df_name <- names(baseline)[i]
+  
+  print("Setting up data frame for metrics")
+  print(df_name)
   
   #' Set up the data frame
   #' add an arbitrary receptor ID and then add back the coordinates later
@@ -135,7 +145,6 @@ for (i in 1:length(scenario)) {
   rec$id <- seq(1:nrow(rec))
   
   #' date and hour indicators
-  if ((n_days_pm == n_days_o3) != T) stop()
   df$dt_utc <- as.POSIXct(paste(date_seq[df$day_UTC], df$hour_UTC), 
                           format="%Y-%m-%d %H", tz="GMT")
   df$dt_mst <- format(df$dt_utc, tz="America/Denver")
@@ -147,10 +156,15 @@ for (i in 1:length(scenario)) {
   df <- merge(df, rec, by=c("lon", "lat"))
   df <- df[with(df, order(date, hour, id)),]
   
-  #' Summarizing HIA exposure metrics at each receptor
-  df_pol <- df[,c("id", "day", "hour", "lon", "lat", "value")]
+  df_pol <- df[,c("id", "day", "hour", "value")]
   
-  #' (1) Annual mean-- mean of all data available
+  #' ---------------------------------------------------------------------------
+  #' Summarizing HIA exposure metrics at each receptor
+  #' ---------------------------------------------------------------------------
+  
+  #' (1) "Annual" mean-- mean of all data available
+  print("Annual mean")
+  print(df_name)
   ann_mean <- df_pol %>%
     group_by(id) %>%
     summarise(ann_mean = mean(value)) 
@@ -159,114 +173,105 @@ for (i in 1:length(scenario)) {
   ann_mean <- merge(ann_mean, rec, by="id")  
   
   #' (2) Daily mean
+  print("Daily mean")
+  print(df_name)
   d24h_mean <- df_pol %>%
     group_by(id, day) %>%
     summarise(d24h_mean = mean(value)) 
   d24h_mean <- merge(d24h_mean, rec, by="id")
   
-  #' (3) Daily 1 hour maximum concentration
-  #' Not used in PM2.5 analysis, but calculating here anyway
-  d1h_max <- df_pol %>%
-    group_by(id, day) %>%
-    summarise(d1h_max = max(value)) 
-  d1h_max <- merge(d1h_max, rec, by="id")
-  
-  #' (4) Daily 8 hour max-- a little more involved
-  #' Need a wide data set
-  df_wide <-  reshape(df_pol[,c("id", "day", "hour", "value")], 
-                      timevar = c("id"),
-                      idvar = c("day", "hour"), direction = "wide")
-  
-  #' caluclate the max 8-hour average for each day
-  #' See FR Vol 80 No 206 Pg 65459 for definition of the design value
-  #' Not used in PM2.5 analysis, but calculating here anyway
-  d8h_max_w <- data.frame(day=as.character(unique(df_wide[,c("day")])))
-  
-  day_list <- unique(df_wide$day)
-  
-  col_ids <- c("day", "hour")
-  
-  n <- length(col_ids)
-  
-  for (j in 1:(ncol(df_wide)-n)) {
-    name <- gsub("value.", "Rec_", colnames(df_wide)[j+n])
+  if (df_name == "o3") {
     
-    temp_df <- data.frame(day = as.numeric(),
-                          max = as.numeric())
+    #' (3) Daily 1 hour maximum concentration
+    #' Not used in PM2.5 analysis
+    print("Daily 1 h max")
+    print(df_name)
+    d1h_max <- df_pol %>%
+      group_by(id, day) %>%
+      summarise(d1h_max = max(value)) 
+    d1h_max <- merge(d1h_max, rec, by="id")
     
-    for (k in 1:length(day_list)) {
-      days <- c(day_list[k], day_list[k+1])
+    #' (4) Daily 8 hour max-- a little more involved
+    #' See CFR Title 40 Vol 2 Part 50 Appendix P for details
+    #' https://www.gpo.gov/fdsys/pkg/CFR-2017-title40-vol2/xml/CFR-2017-title40-vol2-part50.xml
+    print("Daily 8 h max")
+    print(df_name)
+    
+    rec_list <- unique(df_pol$id)
+    temp_df <- data.frame()
+    
+    for (j in 1:length(rec_list)) {
+      df1 <- filter(df_pol, id == rec_list[j]) %>%
+        arrange(day, hour)
       
-      #' two days of hourly data at receptor j 
-      met_df <- df_wide[which(df_wide$day %in% days), c(1, 2, j+n)] 
-      met_df$hour2 <- -1 + seq(1:nrow(met_df))
+      day_list <- unique(df1$day)
       
-      #should have 17 moving averages starting at 7:00am and ending at 11:00pm
-      avg_list <- list()
-      a <- 16 
-      
-      for (l in 7:(7+a)) {
-        hours <- seq(from=l, to=l+7)
-        conc<- met_df[which(met_df$hour2 %in% hours),3]
+      for (k in 1:(length(day_list)-1)) {
+        days <- c(day_list[k], day_list[k+1])
+        df2 <- filter(df1, day %in% days)
         
-        #' need at least 6 hourly concentrations to calculate mean
-        avg_list[l-6] <- ifelse(sum(!is.na(conc)) >= 6, mean(conc, na.rm=T), NA)
+        if(df2$hour[1] != "00") next
+        
+        #should have 24 moving averages starting at 0:00 and ending at 23:00
+        avg_list <- list()
+        a <- 24 
+        
+        for (l in 1:a) {
+          hours <- seq(from=l, to=l+7)
+          df3 <- slice(df2, hours) 
+          
+          #' need at least 6 hourly concentrations (75%) to calculate mean
+          avg_list[l] <- ifelse(sum(!is.na(df3$value)) >= 6, 
+                                mean(df3$value, na.rm=T), 
+                                NA)
+        }
+        
+        rm(df3)
+        b <- unlist(avg_list)
+        
+        #' only valid if there are >= 18 (75%) 8-hr means
+        max <- ifelse(sum(!is.na(b)) >= 13, max(b, na.rm=T), NA)
+        
+        temp <- data.frame(id = rec_list[j],
+                           day = days[1], 
+                           d8h_max = max)
+        temp_df <- rbind(temp_df, temp)
+        rm(temp, df2)
       }
-      
-      b <- unlist(avg_list)
-      
-      #' only valid if there are >= 13 8-hr means
-      max <- ifelse(sum(!is.na(b)) >= 13, max(b, na.rm=T), NA)
-      
-      temp <- data.frame(day = days[1], max = max)
-      temp_df <- rbind(temp_df, temp)
+      rm(df1)
     }
-    
-    d8h_max_w <- merge(d8h_max_w, temp_df, by="day")
-    colnames(d8h_max_w)[ncol(d8h_max_w)] <- name
-    rm(met_df, temp_df)
+    d8h_max <- merge(temp_df, rec, by="id")
+    rm(temp_df)
   }
   
-  #' Transpose d8h_max so that rows are receptors
-  rownames(d8h_max_w) <- d8h_max_w$day
-  d8h_max_w$day <- NULL
-  d8h_max_wt <- as.data.frame(t(d8h_max_w))
-  
-  d8h_max_wt$rec_id <- gsub("Rec_", "", rownames(d8h_max_wt))
-  
-  #' convert back to a long dataset
-  d8h_max <- reshape(d8h_max_wt, 
-                     varying=colnames(d8h_max_wt)[-ncol(d8h_max_wt)],
-                     v.names = "d8h_max",
-                     timevar = "day",
-                     times = colnames(d8h_max_wt)[-ncol(d8h_max_wt)],
-                     direction = "long")  
-  d8h_max$id <- d8h_max$rec_id
-  d8h_max$rec_id <- NULL
-  
-  d8h_max <- merge(d8h_max, rec, by="id")
-  
-  exp_list <- list(ann_mean, d24h_mean, d1h_max, d8h_max)
-  names(exp_list) <- c("ann_mean", "d24h_mean", "d1h_max", "d8h_max")
-  
+  if (df_name == "pm") {
+    exp_list <- list(ann_mean, d24h_mean)
+    names(exp_list) <- c("ann_mean", "d24h_mean")
+  } else {
+    exp_list <- list(ann_mean, d24h_mean, d1h_max, d8h_max)
+    names(exp_list) <- c("ann_mean", "d24h_mean", "d1h_max", "d8h_max")
+  }
+ 
   save(exp_list,
-       file=paste("./HIA Inputs/", pre, df_name, "_receptor_metrics.RData",
+       file=paste("./HIA Inputs/", pre[s], df_name, "_receptor_metrics.RData",
                   sep=""))
   
-  rm(df_pol, df_wide, d24h_mean, ann_mean, d1h_max, d8h_max, exp_list,
-     d8h_max_w, d8h_max_wt)
+  #' Clean up the loop
+  rm(df_pol, d24h_mean, ann_mean, exp_list)
+  
 }
 
 #' Clean up environment
-rm(df, df_name, rec, temp, a, b, avg_list, col_ids, conc, date_seq,
-   day_list, days, hours, i, j, k, l, max, n, name)
+rm(df, df_name, rec, a, b, avg_list, date_seq,
+   day_list, days, hours, i, j, k, l, max)
+rm(baseline)
 
 #' -----------------------------------------------------------------------------
-#' Interpolate CMAQ concentrations to the 1 k populaton density grid and use
+#' Krige CMAQ concentrations to the 1 k populaton density grid and use
 #' zonal statistics to get the average value for the ZCTAs weighted by area and
 #' population density
 #' 
-#' Takes a bit of time, but gives decent estimates
+#' Takes a bit of time, but gives decent estimates of population exposures
 #' 
 #' 1) Read in the SEDAC population density grid
 #'     Going to use 2010 since we'll be modeling 2011 as the baseline year and
@@ -283,6 +288,8 @@ rm(df, df_name, rec, temp, a, b, avg_list, col_ids, conc, date_seq,
 #'     c) calculate population-weighted mean exposures at the ZCTA level
 #'     d) save exposures to a data frame for the HIA
 #' -----------------------------------------------------------------------------
+
+print("Assessing exposures at the ZCTA level")
 
 load("./HIA Inputs/cmaq_spatial.RData")
 
@@ -301,6 +308,9 @@ pop_den_r_1k
 
 plot(pop_den_r_1k)
 
+#' For a quick code check later
+pop_den_df_1k <- as.data.frame(pop_den_r_1k)
+
 #' Overlay the CMAQ receptors with the population denisty raster
 plot(pop_den_r_1k)
 points(cmaq_p, pch=20, cex=0.5)
@@ -318,79 +328,71 @@ cmaq_g <- as(cmaq_r, "SpatialGrid")
 
 #' Get ZCTAs that are covered by the CAMQ raster
 #' Read in the ZCTA shapefile and make sure CRS matches
-co_zcta <- readOGR(dsn = geo_data, layer = "CO_ZCTA_2014")
-co_zcta <- spTransform(co_zcta, CRS=proj4string(pop_den_r_1k))
+load("./Data/Spatial Data/co_zcta.RData")
+co_zcta <- st_transform(co_zcta, crs=ll_wgs84) %>%
+  as("Spatial")
 
-plot(co_zcta)
-points(cmaq_p, col="red", pch=20, cex=0.5)
+# plot(co_zcta)
+# points(cmaq_p, col="red", pch=20, cex=0.5)
 
-#' Subset ZCTA that are completely within the CMAQ domain
+#' #' Subset ZCTA that are completely within the CMAQ domain
 cmaq_bound <- gConvexHull(cmaq_p)
 co_zcta$contains <- gContains(cmaq_bound, co_zcta, byid = T)
 
-plot(co_zcta)
-plot(cmaq_bound, add=T)
-
 #' All ZCTAs with at least one point
 zcta <- co_zcta[cmaq_bound,]
+zcta <- zcta[,"GEOID10"]
+zcta$id <- 1:nrow(zcta)
 
-plot(zcta)
-points(cmaq_p, col="red", pch=20, cex=0.5)
+zcta_key <- as.data.frame(zcta[,c("GEOID10", "id")])
+
+# plot(zcta)
+# points(cmaq_p, col="red", pch=20, cex=0.5)
 
 #' ZCTAs that are completely within the CMAQ domain
 zcta_within <- zcta[which(zcta$contains == T),]
 
-plot(zcta_within)
-points(cmaq_p, col="red", pch=20, cex=0.5)
+# plot(zcta_within)
+# points(cmaq_p, col="red", pch=20, cex=0.5)
 
 #' Save the spatial objects
-save(zcta, zcta_within, file="./HIA Inputs/zcta.RData")
+save(zcta, zcta_within, 
+     file=paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
 
 #' Extract population density in each ZCTA using extract() (raster package)
-#' Save this data frame-- going to be the same for each metric 
+#' Save this data frame-- going to be the same for each metric, since the
+#' kriged surface is based on the population density raster 
 #' 
 #' NOTE: extract(weights = T) means that the extract function estimates the 
 #' fraction of the ZCTA area occupied by the grid cell. 
 
-zcta_pop_l <- raster::extract(pop_den_r_1k, zcta, weights=T)
-names(zcta_pop_l) <- zcta@data$GEOID10
+zcta_weights <- raster::extract(pop_den_r_1k, zcta, weights=T, df=T,
+                                cellnumbers = T)
+zcta_weights <- zcta_weights %>% 
+  rename(id = ID, pop_density = X2010.COloradoPopDensity)
 
-undo_lists <- function(x) {
-  df <- data.frame()
-  for (i in 1:length(x)) {
-    name <- names(x)[i]
-    data <- as.data.frame(x[[i]])
-    data$id <- names(x)[[i]]
-    df <- rbind(df, data)
-    rm(data)
-  }
-  return(df)
-}
 
-zcta_pop <- undo_lists(zcta_pop_l)
-colnames(zcta_pop) <- c("pop_den", "pop_area_wt", "pop_GEOID10")
-
-#' #' check to see if area weights within each ZCTA sum to 1
-wt_check <- zcta_pop %>%
-  group_by(pop_GEOID10) %>%
-  summarise(wt_zcta = sum(pop_area_wt))
+#' check to see if area weights within each ZCTA sum to 1
+wt_check <- zcta_weights %>%
+  group_by(id) %>%
+  summarise(wt_zcta = sum(weight))
 summary(wt_check$wt_zcta)
 
 #' Loop through pollutants, metrics, and days to estimate pop-weighted
 #' average exposures at the ZCTA level
 pol_names <- c("pm", "o3")
 
+# show.vgms() 
+all_models <- c("Sph", "Exp", "Gau", "Wav", "Exc", 
+                "Ste", "Bes", "Mat", "Cir", "Pen")
+
 for (i in 1:length(pol_names)) {
 
   #' read in data
-  load(paste("./HIA Inputs/", pre, pol_names[i], "_receptor_metrics.RData", 
+  load(paste("./HIA Inputs/", pre[s], pol_names[i], "_receptor_metrics.RData", 
              sep=""))
   
   metrics <- names(exp_list)
-  if(pol_names[[i]] == "pm") {
-    metrics <- names(exp_list)[1:2]
-  } 
-  
   metrics
   
   zcta_list <- list()
@@ -432,32 +434,30 @@ for (i in 1:length(pol_names)) {
       #   simple_theme
       # ggsave(filename = "./Maps/For Report/CMAQ Receptors.jpeg",
       #        device = "jpeg", dpi = 500)
-
-      #' If there are missing values, skip this iteration
-      if (anyNA(as.data.frame(test_p_2[,metrics[j]]))) next 
+      
+      #' scale exposures in order to avoid errors in kriging
+      #' small values don't do well because issues with truncation!
+      # test_p_2@data[(metrics[j])] <- test_p_2@data[(metrics[j])] * exp_scale
       
       #' Create a smooth surface using ordinary kriging
-      cmaq_vgm <- variogram(get(metrics[j]) ~ 1, test_p_2) #'generate the semivariogram
-      plot(cmaq_vgm)
-      
-      #show.vgms() 
+      #'generate the semivariogram
+      cmaq_vgm <- variogram(get(metrics[j]) ~ 1, test_p_2) 
+      # plot(cmaq_vgm)
       
       #' Fitting the semivariogram
-      cmaq_fit <- fit.variogram(cmaq_vgm, 
-                                model=vgm(c("Sph", "Exp", "Gau", "Wav", "Exc", 
-                                            "Ste", "Bes", "Mat", "Cir", "Pen"))) 
-      cmaq_fit 
+      cmaq_fit <- fit.variogram(cmaq_vgm, model=vgm(all_models),
+                                fit.kappa = T) 
       
-      plot(cmaq_vgm, cmaq_fit)
+      # plot(cmaq_vgm, cmaq_fit)
       
       #' Ordinary kriging using the fitted semivariogram
       #' Use 24 nearest points (important for ozone)
       cmaq_ok <- krige(get(metrics[j]) ~ 1, test_p_2, cmaq_g, cmaq_fit,
-                       nmax=24)
-      
-      spplot(cmaq_ok, "var1.pred",
-             main = paste("pol= ", pol_names[i], ", met= ", metrics[j],
-                          ", day= ", days[k], sep=""))
+                       nmax = 24)
+
+      # spplot(cmaq_ok, "var1.pred",
+      #        main = paste("pol= ", pol_names[i], ", met= ", metrics[j],
+      #                     ", day= ", days[k], sep=""))
       
       #' Plot for report
       # test_ok_sf <- st_as_sf(as(cmaq_ok, "SpatialPointsDataFrame"))
@@ -473,30 +473,36 @@ for (i in 1:length(pol_names)) {
       #        device = "jpeg", dpi = 500)
       
       #' Turn grid back into raster for zonal statistics
+      #' Want to make sure the grid cells are in the same order as the
+      #' population density raster when they get converted to a data frame
       cmaq_r <- raster(cmaq_ok)
-      #cmaq_r
       
-      #' Zonal statistics
-      #' Extract CMAQ concentrations and calculate weighted means and SD 
+      #' Zonal statistics using weights from the population-density raster
+      cmaq_df <- as.data.frame(cmaq_r)
+      cmaq_df$cell <- rownames(cmaq_df)
+      
+      #' Check! Data frame for kriging should match population density
+      if (nrow(cmaq_df) != nrow(pop_den_df_1k)) stop()
+      
+      #' calculate weighted means and SD 
+      #' Need to "unscale" exposure concentrations to get back to original units
+      #' See just before the  for details ()
       #' (Hmisc) 
-      zcta_conc_l <- raster::extract(cmaq_r, zcta, weights=T)
-      names(zcta_conc_l) <- zcta@data$GEOID10
-      
-      #' Undo lists and combine
-      zcta_conc <- undo_lists(zcta_conc_l)
-      colnames(zcta_conc) <- c("conc", "conc_area_wt", "GEOID10")
-      
-      # Combine the ZCTA concentrations with the population density dataframe
-      zcta_conc <- cbind(zcta_conc, zcta_pop)
-      
+      zcta_conc <- merge(zcta_weights, cmaq_df, by="cell")
+      zcta_conc <- rename(zcta_conc, conc = var1.pred) %>%
+        arrange(id) %>%
+        mutate(conc = conc / exp_scale)
+    
       #' Calculate weighted averages at the ZCTA level
-      #' New weight-- population density * the fraction of the pop_den cell in the 
-      #' polygon *  the fraction of the cmaq cell in the polygon
+      #' New weight-- population density * the fraction of the polygon covered 
+      #' by the cell
+
       zcta_cmaq <- zcta_conc %>%
-        mutate(wt_prod = conc_area_wt * pop_area_wt * pop_den) %>%
-        group_by(GEOID10) %>%
+        mutate(wt_prod = pop_density * weight) %>%
+        group_by(id) %>%
         summarise(wt_conc = wtd.mean(x = conc, weights = wt_prod),
-                  wt_conc_sd = sqrt(wtd.var(x = conc, weights = wt_prod)))
+                  wt_conc_sd = sqrt(wtd.var(x = conc, weights = wt_prod))) %>% 
+        left_join(zcta_key, by="id")
       head(zcta_cmaq)
       summary(zcta_cmaq)
       
@@ -530,7 +536,7 @@ for (i in 1:length(pol_names)) {
       zcta_cmaq$day <- days[k]
       
       met_df <- rbind(met_df, zcta_cmaq)
-      rm(zcta_conc_l, zcta_conc, zcta_cmaq)
+      rm(zcta_conc, zcta_cmaq)
     }
   zcta_list[[j]] <- met_df
   names(zcta_list)[length(zcta_list)] <- metrics[j]
@@ -538,11 +544,11 @@ for (i in 1:length(pol_names)) {
   rm(met_df)
   }
   save(zcta_list,
-       file=paste("./HIA Inputs/", pre, pol_names[i], "_zcta_metrics.RData",
+       file=paste("./HIA Inputs/", pre[s], pol_names[i], "_zcta_metrics.RData",
                   sep=""))
 }
 
 #' Clean up environment
-rm(zcta_list, cmaq_fit, cmaq_vgm, test_df, wt_check, zcta_pop, cmaq_bound,
+rm(zcta_list, cmaq_fit, cmaq_vgm, test_df, wt_check, cmaq_bound,
    cmaq_g, cmaq_e, cmaq_ok, cmaq_p, cmaq_r, co_zcta, exp_list, i, j, k, 
    pop_den_e, pop_den_r_1k, pop_den_res, pop_den_t)

@@ -16,26 +16,34 @@
 #' BEFORE RUNNING THIS CODE, SET THE ANALYSIS UP IN THE HEADER
 #' -----------------------------------------------------------------------------
 
-start <- Sys.time()
+source("0_HIA Header.R")
 
-source("1_HIA Header.R", local=T)
+for (s in 1:length(pre)) {
+  start <- Sys.time()
+  
+  #' Pool the CRs
+  #' Only need to run once, but it doesn't hurt to keep it 
+  source("2_HIA CR Pooling.R")
+  
+  #' summarize population estimates
+  #' Again, only need to run once, but it doesn't change anything to run again
+  source("2_Population Estimates.R")
+  
+  #' Compile the HIA databases
+  #' Same as above
+  source("2_HIA Databases.R")
+  
+  #' Assess exposures at the ZCTA level
+  source("3_HIA Exp Assessment.R")
+  
+  #' Run the MC analysis
+  source("4_HIA Monte Carlo.R")
+  
+  #' Monetization and Inequality
+  source("5_HIA Inequality.R")
+  
+  runtime <- Sys.time() - start
+  save(runtime, file=paste("./HIA Outputs/", pre[s], "_runtime.RData"))
+}
 
-#' Pool the CRs
-source("2_HIA CR Pooling.R")
 
-#' summarize population estimates
-source("2_Population Estimates.R")
-
-#' Compile the HIA databases
-source("2_HIA Databases.R")
-
-#' Assess exposures at the ZCTA level
-source("3_HIA Exp Assessment.R", local=T)
-
-#' Run the MC analysis
-source("4_HIA Monte Carlo.R", local=T)
-
-#' Monetization and Inequality
-source("5_HIA Inequality.R", local=T)
-
-runtime <- Sys.time() - start
