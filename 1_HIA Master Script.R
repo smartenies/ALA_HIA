@@ -18,7 +18,7 @@
 
 source("0_HIA Header.R")
 
-for (s in 1:length(pre)) {
+for (s in 3:length(pre)) {
   start <- Sys.time()
   
   #' Pool the CRs
@@ -44,6 +44,8 @@ for (s in 1:length(pre)) {
   
   runtime <- Sys.time() - start
   save(runtime, file=paste("./HIA Outputs/", pre[s], "_runtime.RData"))
+  
+  gc()
 }
 
 

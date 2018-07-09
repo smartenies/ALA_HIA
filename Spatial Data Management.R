@@ -86,6 +86,19 @@ plot(st_geometry(co_counties))
 
 save(co_counties, file="./Data/Spatial Data/co_counties.RData")
 
+#' Front Range airsheds: Arkansas, South Platt, Republican
+fr_airsheds <- st_read(paste(geo_data, "co_airsheds.shp", sep="")) %>%
+  filter(AIRSHED %in% c("Arkanasas", "South Platt", "Republican")) %>%
+  st_transform(crs = albers)
+head(fr_airsheds)
+plot(st_geometry(fr_airsheds))
+
+#' Airshed ZCTAs
+fr_zcta <- st_join(co_zcta, fr_airsheds) %>%
+  filter(!is.na(AIRSHED))
+plot(st_geometry(fr_zcta))
+save(fr_zcta, file="./Data/Spatial Data/fr_zcta.RData")
+
 #' Southern Front Range counties: Custer (027), El Paso (041), Fremont (043),
 #' Pueblo (101), Teller (119),
 sfr <- c("08027", "08041", "08043", "08101", "08119")
@@ -99,10 +112,17 @@ save(sfr_counties, file="./Data/Spatial Data/sfr_counties.RData")
 #' Southern Front Range ZCTAs
 sfr_zcta <- st_join(co_zcta, sfr_counties) %>%
   filter(!is.na(county))
-
-# sfr_zcta <- st_intersection(co_zcta, sfr_counties)
-
 save(sfr_zcta, file="./Data/Spatial Data/sfr_zcta.RData")
+
+#' HIA boundary for CMAQ points
+hia_boundary <- st_read(paste(geo_data, "ALA_HIA_bound.shp", sep="")) %>%
+  st_transform(crs = albers)
+head(hia_boundary)
+plot(st_geometry(hia_boundary))
+save(hia_boundary, file="./Data/Spatial Data/hia_boundary.RData")
+
+plot(st_geometry(sfr_counties))
+plot(st_geometry(hia_boundary), border="red", add=T)
 
 #' Map of the study area
 ggplot() +

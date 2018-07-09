@@ -280,6 +280,8 @@ rm(baseline)
 #' 2) use the pop density raster to create an empty grid for kriging
 #' 3) identify which ZCTAs are within the study area 
 #'     Both overlapping and completly within
+#'     Start with ZCTAs in the Front Range airsheds
+#'     Subset to those within the CMAQ domain
 #' 4) Use zonal statistics to extract population density for each ZCTA. This 
 #'     does not change from metric to metric
 #' 5) Loop through each pollutant and day to:
@@ -290,8 +292,23 @@ rm(baseline)
 #' -----------------------------------------------------------------------------
 
 print("Assessing exposures at the ZCTA level")
-
 load("./HIA Inputs/cmaq_spatial.RData")
+
+#' Subset CMAQ points based on the HIA boundary and get a new extent
+load("./Data/Spatial Data/hia_boundary.RData")
+hia_boundary <- st_transform(hia_boundary, crs=ll_wgs84) %>% 
+  as("Spatial")
+
+plot(cmaq_p)
+plot(hia_boundary, border="red", add=T)
+
+cmaq_p <- cmaq_p[hia_boundary,]
+cmaq_e <- extent(cmaq_p)
+
+cmaq_ids <- unique(cmaq_p$id)
+
+plot(cmaq_p)
+plot(hia_boundary, border="red", add=T)
 
 #' Read in the population density geotiff
 #' Resolution is 0.00833 deg (approximately 1 km)
@@ -326,10 +343,10 @@ cmaq_r
 #' grid needed for interpolation
 cmaq_g <- as(cmaq_r, "SpatialGrid")
 
-#' Get ZCTAs that are covered by the CAMQ raster
+#' Get ZCTAs within the Front Range airshed that are covered by the CAMQ raster
 #' Read in the ZCTA shapefile and make sure CRS matches
-load("./Data/Spatial Data/co_zcta.RData")
-co_zcta <- st_transform(co_zcta, crs=ll_wgs84) %>%
+load("./Data/Spatial Data/fr_zcta.RData")
+co_zcta <- st_transform(fr_zcta, crs=ll_wgs84) %>%
   as("Spatial")
 
 # plot(co_zcta)
@@ -337,7 +354,12 @@ co_zcta <- st_transform(co_zcta, crs=ll_wgs84) %>%
 
 #' #' Subset ZCTA that are completely within the CMAQ domain
 cmaq_bound <- gConvexHull(cmaq_p)
-co_zcta$contains <- gContains(cmaq_bound, co_zcta, byid = T)
+save(cmaq_bound, file=paste("./HIA Inputs/", pre[s], "CMAQ_bound.RData", 
+                            sep=""))
+
+# plot(co_zcta)
+# plot(cmaq_bound, add=T)
+# points(cmaq_p, col="red", pch=20, cex=0.5)
 
 #' All ZCTAs with at least one point
 zcta <- co_zcta[cmaq_bound,]
@@ -349,14 +371,15 @@ zcta_key <- as.data.frame(zcta[,c("GEOID10", "id")])
 # plot(zcta)
 # points(cmaq_p, col="red", pch=20, cex=0.5)
 
-#' ZCTAs that are completely within the CMAQ domain
-zcta_within <- zcta[which(zcta$contains == T),]
+#' ZCTA completely within the boundary
+zcta$contains <- gContains(cmaq_bound, zcta, byid=T)[,1]
+zcta_within <- zcta[zcta$contains == T,]
 
 # plot(zcta_within)
 # points(cmaq_p, col="red", pch=20, cex=0.5)
 
 #' Save the spatial objects
-save(zcta, zcta_within, 
+save(zcta, zcta_within,
      file=paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
 
 #' Extract population density in each ZCTA using extract() (raster package)
@@ -371,6 +394,8 @@ zcta_weights <- raster::extract(pop_den_r_1k, zcta, weights=T, df=T,
 zcta_weights <- zcta_weights %>% 
   rename(id = ID, pop_density = X2010.COloradoPopDensity)
 
+save(zcta_weights, file=paste("./HIA Inputs/", pre[s], "ZCTA_weights.RData", 
+                              sep=""))
 
 #' check to see if area weights within each ZCTA sum to 1
 wt_check <- zcta_weights %>%
@@ -400,7 +425,9 @@ for (i in 1:length(pol_names)) {
   for (j in 1:length(metrics)) {
     
     #' extract data frame from list
+    #' make sure to only include receptors within the study boundary
     test_df <- exp_list[[j]]
+    test_df <- test_df[which(test_df$id %in% cmaq_ids),]
     
     #' create a spatial object from the metric data frame
     test_p <- test_df
@@ -433,11 +460,11 @@ for (i in 1:length(pol_names)) {
       #   theme(legend.position = "bottom") +
       #   simple_theme
       # ggsave(filename = "./Maps/For Report/CMAQ Receptors.jpeg",
-      #        device = "jpeg", dpi = 500)
+      #        device = "jpeg", dpi = 300)
       
       #' scale exposures in order to avoid errors in kriging
       #' small values don't do well because issues with truncation!
-      # test_p_2@data[(metrics[j])] <- test_p_2@data[(metrics[j])] * exp_scale
+      test_p_2@data[(metrics[j])] <- test_p_2@data[(metrics[j])] * exp_scale
       
       #' Create a smooth surface using ordinary kriging
       #'generate the semivariogram
@@ -463,14 +490,14 @@ for (i in 1:length(pol_names)) {
       # test_ok_sf <- st_as_sf(as(cmaq_ok, "SpatialPointsDataFrame"))
       # ggplot() +
       #   ggtitle("B: Kriged 1 km Point Estimates") +
-      #   geom_sf(data = test_ok_sf, aes(color=var1.pred)) +
+      #   geom_sf(data = test_ok_sf, aes(color=var1.pred / exp_scale)) +
       #   geom_sf(data = st_as_sf(zcta), fill=NA, color="grey50") +
       #   scale_color_continuous(name = "Concentration",
       #                          low="yellow", high="red") +
       #   theme(legend.position = "bottom") +
       #   simple_theme
       # ggsave(filename = "./Maps/For Report/Kriged Receptors.jpeg",
-      #        device = "jpeg", dpi = 500)
+      #        device = "jpeg", dpi = 300)
       
       #' Turn grid back into raster for zonal statistics
       #' Want to make sure the grid cells are in the same order as the
@@ -519,7 +546,7 @@ for (i in 1:length(pol_names)) {
       #   theme(legend.position = "bottom") +
       #   simple_theme
       # ggsave(filename = "./Maps/For Report/ZCTA Concentrations.jpeg",
-      #        device = "jpeg", dpi = 500)
+      #        device = "jpeg", dpi = 300)
       
       #' Plot exposure concentration
       #zcta_1 <- merge(zcta, zcta_cmaq, by="GEOID10")
