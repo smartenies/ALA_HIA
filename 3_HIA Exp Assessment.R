@@ -88,7 +88,8 @@ cmaq_data_output <- function(cmaq_data) {
   
   #' get the extent of the grid
   cmaq_e <- extent(cmaq_p)
-  save(cmaq_e, cmaq_p, file="./HIA Inputs/cmaq_spatial.RData")
+  save(cmaq_e, cmaq_p, file=paste("./HIA Inputs/", pre[s], "cmaq_spatial.RData",
+                                  sep=""))
   
   #' matrix of grid cell coordinates
   lon_lat <- data.frame("lon" = as.vector(cmaq_lon),
@@ -126,6 +127,27 @@ save(baseline, file=paste("./HIA Inputs/", pre[s], "CMAQ_output.RData", sep=""))
 #' -----------------------------------------------------------------------------
 #' Calculate annual and daily metrics for each pollutant
 #' -----------------------------------------------------------------------------
+load(paste("./HIA Inputs/", pre[s], "CMAQ_output.RData", sep=""))
+load(paste("./HIA Inputs/", pre[s], "cmaq_spatial.RData", sep=""))
+
+#' Subset CMAQ points based on the HIA boundary and get a new extent
+load("./Data/Spatial Data/hia_boundary.RData")
+hia_boundary <- st_transform(hia_boundary, crs=ll_wgs84) %>% 
+  as("Spatial")
+
+plot(cmaq_p)
+plot(hia_boundary, border="red", add=T)
+
+cmaq_p <- cmaq_p[hia_boundary,]
+cmaq_e <- extent(cmaq_p)
+
+cmaq_ids <- unique(cmaq_p$id)
+
+plot(cmaq_p)
+plot(hia_boundary, border="red", add=T)
+
+save(cmaq_e, cmaq_p, cmaq_ids,
+     file=paste("./HIA Inputs/", pre[s], "cmaq_spatial.RData", sep=""))
 
 load(file=paste("./HIA Inputs/", pre[s], "CMAQ_output.RData", sep=""))
 
@@ -292,23 +314,7 @@ rm(baseline)
 #' -----------------------------------------------------------------------------
 
 print("Assessing exposures at the ZCTA level")
-load("./HIA Inputs/cmaq_spatial.RData")
-
-#' Subset CMAQ points based on the HIA boundary and get a new extent
-load("./Data/Spatial Data/hia_boundary.RData")
-hia_boundary <- st_transform(hia_boundary, crs=ll_wgs84) %>% 
-  as("Spatial")
-
-plot(cmaq_p)
-plot(hia_boundary, border="red", add=T)
-
-cmaq_p <- cmaq_p[hia_boundary,]
-cmaq_e <- extent(cmaq_p)
-
-cmaq_ids <- unique(cmaq_p$id)
-
-plot(cmaq_p)
-plot(hia_boundary, border="red", add=T)
+load(paste("./HIA Inputs/", pre[s], "cmaq_spatial.RData", sep=""))
 
 #' Read in the population density geotiff
 #' Resolution is 0.00833 deg (approximately 1 km)
@@ -394,7 +400,7 @@ zcta_weights <- raster::extract(pop_den_r_1k, zcta, weights=T, df=T,
 zcta_weights <- zcta_weights %>% 
   rename(id = ID, pop_density = X2010.COloradoPopDensity)
 
-save(zcta_weights, file=paste("./HIA Inputs/", pre[s], "ZCTA_weights.RData", 
+save(zcta_weights, file=paste("./HIA Inputs/", pre[s], "zcta_weights.RData", 
                               sep=""))
 
 #' check to see if area weights within each ZCTA sum to 1

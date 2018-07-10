@@ -116,12 +116,16 @@ for (i in 1:length(pol_names)) {
         
         #' Monte Carlo for HIA
         for (m in 1:length(days)) {
-          exp_df <- zcta_exp[which(zcta_exp$day == days[m]),]
+          exp_df <- unique(as.data.frame(zcta_exp[which(zcta_exp$day == days[m]),]))
 
           #' Exposure
+          #' If exposure SD is NaN, set to 0
           exp <- as.numeric(exp_df[which(exp_df$GEOID10==zctas[l]), "wt_conc"])
-          exp_sd <- as.numeric(exp_df[which(exp_df$GEOID10==zctas[l]), "wt_conc_sd"])
           
+          exp_sd <- ifelse(is.nan(as.numeric(exp_df[which(exp_df$GEOID10==zctas[l]), "wt_conc_sd"])),
+                           0,
+                           as.numeric(exp_df[which(exp_df$GEOID10==zctas[l]), "wt_conc_sd"]))
+                           
           exp_dist <- rnorm(n = mc_n, mean = exp, sd = exp_sd)
           
           #' loop through n iterations of the MC
@@ -162,7 +166,7 @@ for (i in 1:length(pol_names)) {
 }
 
 #' Valuate the impacts and summarize by pollutant and outcome
-detach(package:plyr)
+# detach(package:plyr)
 out_df$outcome <- as.character(out_df$outcome)
 out_df <- left_join(out_df, values, by="outcome") %>%
   mutate(median_value = median_scaled * value_2024,

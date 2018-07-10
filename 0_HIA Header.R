@@ -100,7 +100,7 @@ pop_den_tif <- "2010-COloradoPopDensity.tif"
 #' exposure scale factor to avoid errors in kriging
 #' The variogram fitting step doesn't do well with small numbers
 #' due to truncation issues
-exp_scale <- 10**7
+exp_scale <- 10**9
 
 #' Population for mapping rates
 rate_pop <- 10000
