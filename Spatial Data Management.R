@@ -95,7 +95,9 @@ plot(st_geometry(fr_airsheds))
 
 #' Airshed ZCTAs
 fr_zcta <- st_join(co_zcta, fr_airsheds) %>%
-  filter(!is.na(AIRSHED))
+  filter(!is.na(AIRSHED)) %>%
+  select(GEOID10) %>%
+  distinct()
 plot(st_geometry(fr_zcta))
 save(fr_zcta, file="./Data/Spatial Data/fr_zcta.RData")
 

@@ -11,7 +11,8 @@
 #' Martin Drake (in Colorado Springs, CO). The facilities are slated to be 
 #' decommissioned by 2025.
 #' 
-#' This script calculates the rate of attributable impacts for each ZCTA, maps
+#' This script summarizes exposures and health benefits at the ZCTA level,
+#' calculates the rate of attributable impacts for each ZCTA, maps
 #' these rates, and then generates the AI and CI estimates for each pollutant-
 #' outcome combination. Concentration curves are also plotted and saved
 #' 
@@ -23,9 +24,34 @@ load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
 load("./Data/Spatial Data/power_plants.RData")
 
 #' load the impacts file
+#' Combined the winter and summer impacts
 load(paste("./HIA Outputs/", pre[s], "zcta_impacts.RData",sep=""))
 out_df$zcta <- as.character(out_df$zcta)
-  
+
+out_df2 <- out_df2
+
+load(paste("./HIA Outputs/", pre[s+1], "zcta_impacts.RData",sep=""))
+out_df$zcta <- as.character(out_df$zcta)
+
+out_df2 <- bind_rows(out_df2, out_df)
+rm(out_df)
+
+
+
+#' Summarize impacts
+total_df <- out_df %>%
+  group_by(pol, outcome) %>%
+  summarise(median = round(sum(median, na.rm=T),2),
+            p2.5 = round(sum(p2.5, na.rm=T),2),
+            p97.5 = round(sum(p97.5, na.rm=T),2),
+            median_scaled = round(sum(median_scaled, na.rm=T),0),
+            p2.5_scaled = round(sum(p2.5_scaled, na.rm=T),0),
+            p97.5_scaled = round(sum(p97.5_scaled, na.rm=T),0),
+            median_value = round(sum(median_value, na.rm=T),0),
+            p2.5_value = round(sum(p2.5_value, na.rm=T),0),
+            p97.5_value = round(sum(p97.5_value, na.rm=T),0))
+
+
 #' Load the inequality indicators
 ses <- read.table(ses_file, header=T, stringsAsFactors = F) %>%
   mutate(GEOID = gsub("86000US", "", GEOID)) %>%
@@ -34,9 +60,9 @@ ses <- read.table(ses_file, header=T, stringsAsFactors = F) %>%
                 pct_limited_eng, pct_hh_pov, med_income)
 
 #' Clean up median impacts and calculate rate
-impacts <- out_df %>%
+impacts <- out_df2 %>%
   left_join(ses, by="zcta") %>% 
-  select(zcta, pol, outcome, median_scaled, total_pop) %>%
+  select(zcta, pol, outcome, median_scaled, total_pop) %>% 
   mutate(pol = as.character(pol)) %>%
   mutate(rate = (median_scaled / total_pop) * rate_pop) 
 

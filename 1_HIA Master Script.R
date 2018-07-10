@@ -18,34 +18,40 @@
 
 source("0_HIA Header.R")
 
+#' Pool the CRs
+#' Only need to run once, but it doesn't hurt to keep it 
+source("2_HIA CR Pooling.R")
+
+#' summarize population estimates
+#' Again, only need to run once, but it doesn't change anything to run again
+source("2_Population Estimates.R")
+
+#' Compile the HIA databases
+#' Same as above
+source("2_HIA Databases.R")
+
+#' Loop through each step in the HIA
+start <- Sys.time()
+
 for (s in 3:length(pre)) {
-  start <- Sys.time()
-  
-  #' Pool the CRs
-  #' Only need to run once, but it doesn't hurt to keep it 
-  source("2_HIA CR Pooling.R")
-  
-  #' summarize population estimates
-  #' Again, only need to run once, but it doesn't change anything to run again
-  source("2_Population Estimates.R")
-  
-  #' Compile the HIA databases
-  #' Same as above
-  source("2_HIA Databases.R")
-  
   #' Assess exposures at the ZCTA level
   source("3_HIA Exp Assessment.R")
-  
-  #' Run the MC analysis
-  source("4_HIA Monte Carlo.R")
-  
-  #' Monetization and Inequality
-  source("5_HIA Inequality.R")
-  
-  runtime <- Sys.time() - start
-  save(runtime, file=paste("./HIA Outputs/", pre[s], "_runtime.RData"))
-  
-  gc()
 }
 
+gc()
+
+for (s in 3:length(pre)) {
+  #' Run the MC analysis
+  source("4_HIA Monte Carlo.R")
+}
+
+gc()
+
+#' for (s in 3:length(pre)) {
+#'   #' Monetization and Inequality
+#'   if(s %% 2 == 0) next
+#'   source("5_HIA Inequality.R")
+#' }
+
+runtime <- Sys.time() - start
 

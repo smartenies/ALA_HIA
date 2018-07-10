@@ -171,24 +171,11 @@ out_df$outcome <- as.character(out_df$outcome)
 out_df <- left_join(out_df, values, by="outcome") %>%
   mutate(median_value = median_scaled * value_2024,
          p2.5_value = p2.5_scaled * value_2024,
-         p97.5_value = p97.5_scaled * value_2024)
+         p97.5_value = p97.5_scaled * value_2024) %>%
+  distinct()
 
-total_df <- out_df %>%
-  group_by(pol, outcome) %>%
-  summarise(median = round(sum(median, na.rm=T),2),
-            p2.5 = round(sum(p2.5, na.rm=T),2),
-            p97.5 = round(sum(p97.5, na.rm=T),2),
-            median_scaled = round(sum(median_scaled, na.rm=T),0),
-            p2.5_scaled = round(sum(p2.5_scaled, na.rm=T),0),
-            p97.5_scaled = round(sum(p97.5_scaled, na.rm=T),0),
-            median_value = round(sum(median_value, na.rm=T),0),
-            p2.5_value = round(sum(p2.5_value, na.rm=T),0),
-            p97.5_value = round(sum(p97.5_value, na.rm=T),0))
+test <- distinct(out_df)
 
-save(out_df, total_df,
-     file=paste("./HIA Outputs/", pre[s], "zcta_impacts.RData",sep=""))
-write_xlsx(total_df,
-           path=paste("./HIA Outputs/", pre[s], "zcta_impacts_summary.xlsx",
-                      sep=""))  
-  
+save(out_df, file=paste("./HIA Outputs/", pre[s], "zcta_impacts.RData",sep=""))
+
   

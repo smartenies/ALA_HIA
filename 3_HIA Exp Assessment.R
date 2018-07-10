@@ -478,9 +478,7 @@ for (i in 1:length(pol_names)) {
       # plot(cmaq_vgm)
       
       #' Fitting the semivariogram
-      cmaq_fit <- fit.variogram(cmaq_vgm, model=vgm(all_models),
-                                fit.kappa = T) 
-      
+      cmaq_fit <- fit.variogram(cmaq_vgm, model=vgm(all_models)) 
       # plot(cmaq_vgm, cmaq_fit)
       
       #' Ordinary kriging using the fitted semivariogram
