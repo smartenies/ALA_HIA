@@ -35,6 +35,7 @@ start <- Sys.time()
 
 for (s in 3:length(pre)) {
   #' Assess exposures at the ZCTA level
+  print(s)
   source("3_HIA Exp Assessment.R")
 }
 
@@ -42,16 +43,17 @@ gc()
 
 for (s in 3:length(pre)) {
   #' Run the MC analysis
+  print(s)
   source("4_HIA Monte Carlo.R")
 }
 
 gc()
 
-#' for (s in 3:length(pre)) {
-#'   #' Monetization and Inequality
-#'   if(s %% 2 == 0) next
-#'   source("5_HIA Inequality.R")
-#' }
+for (s in 3:length(pre)) {
+  #' Summary of Exposures, Health Benefits, and Inequality
+  if(s %% 2 == 0) next
+  source("5_HIA Summary.R")
+}
 
 runtime <- Sys.time() - start
 

@@ -123,3 +123,32 @@ ses_file <- "./HIA Inputs/ses indicators.txt"
 
 #' Outputs:
 out_path <- "./HIA Outputs/"
+
+#' Outcome dictionary
+out_dict <- list(
+  ac_bronchitis = "Acute bronchitis",
+  ed_ast = "ED visit for asthma",
+  hosp_cvd = "CVD hospitalization",
+  hosp_res = "Respiratory hospitalization",
+  minor_ast = "Asthma symptom day",
+  minor_astc = "Asthma symptom day (cough)",
+  minor_astw = "Asthma symptom day (wheeze)",
+  minor_asts = "Asthma symptom day (shortness of breath)",
+  minor_lrs = "Lower respiratory symptoms",
+  minor_mrad = "Minor restricted activity day",
+  minor_wld = "Work loss day",
+  mort_ac = "All-cause mortality",
+  minor_sld = "School absence",
+  st_mort_ac = "All-cause mortality",
+  st_mort_na = "Non-accidental mortality"
+)
+
+#' SES indicator dictionary
+ses_dict <- list(
+  med_income = "median income",
+  pct_hh_pov = "percentage of households in poverty",
+  pct_less_hs = "percentage of adults over age 25 with\nless than a high school diploma",
+  pct_limited_eng = "precentage of households speaking limited English",
+  pct_poc = "percentage of the population that is not non-Hispanic white"
+)
+

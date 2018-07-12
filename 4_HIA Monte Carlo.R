@@ -174,8 +174,6 @@ out_df <- left_join(out_df, values, by="outcome") %>%
          p97.5_value = p97.5_scaled * value_2024) %>%
   distinct()
 
-test <- distinct(out_df)
-
 save(out_df, file=paste("./HIA Outputs/", pre[s], "zcta_impacts.RData",sep=""))
 
   
