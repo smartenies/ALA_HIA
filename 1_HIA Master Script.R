@@ -18,22 +18,23 @@
 
 source("0_HIA Header.R")
 
-#' Pool the CRs
-#' Only need to run once, but it doesn't hurt to keep it 
-source("2_HIA CR Pooling.R")
-
-#' summarize population estimates
-#' Again, only need to run once, but it doesn't change anything to run again
-source("2_Population Estimates.R")
-
-#' Compile the HIA databases
-#' Same as above
-source("2_HIA Databases.R")
+#' #' Pool the CRs
+#' #' Only need to run once, but it doesn't hurt to keep it 
+#' source("2_HIA CR Pooling.R")
+#' 
+#' #' summarize population estimates
+#' #' Again, only need to run once, but it doesn't change anything to run again
+#' source("2_Population Estimates.R")
+#' 
+#' #' Compile the HIA databases
+#' #' Same as above
+#' source("2_HIA Databases.R")
 
 #' Loop through each step in the HIA
 start <- Sys.time()
 
-for (s in 3:length(pre)) {
+# for (s in 3:length(pre)) {
+for (s in 1:6) {
   #' Assess exposures at the ZCTA level
   print(s)
   source("3_HIA Exp Assessment.R")
@@ -41,7 +42,8 @@ for (s in 3:length(pre)) {
 
 gc()
 
-for (s in 3:length(pre)) {
+# for (s in 3:length(pre)) {
+for (s in 1:6) {
   #' Run the MC analysis
   print(s)
   source("4_HIA Monte Carlo.R")
@@ -49,7 +51,8 @@ for (s in 3:length(pre)) {
 
 gc()
 
-for (s in 3:length(pre)) {
+# for (s in 3:length(pre)) {
+for (s in 1:6) {
   #' Summary of Exposures, Health Benefits, and Inequality
   if(s %% 2 == 0) next
   source("5_HIA Summary.R")
