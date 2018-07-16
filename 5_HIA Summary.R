@@ -366,6 +366,9 @@ for (i in 1:length(unique(impacts2$pol))) {
     ses_indicators <- unique(zcta_map$ses_indic)
     
     for (k in 1:length(ses_indicators)) {
+      y_lab <- ifelse(is.na(cmaq_scenario[s]), "Health impact rate:",
+                      "Health benefit rate")
+      
       zcta_ses <- filter(zcta_map, ses_indic == ses_indicators[k])
       
       jpeg(filename = paste("./HIA Outputs/CI Plots/", pre[s], pre[s+1], "/", 
@@ -373,8 +376,7 @@ for (i in 1:length(unique(impacts2$pol))) {
                             ses_indicators[k], ".jpeg", sep=""))
       curveConcent(zcta_ses$rate, zcta_ses$ses_value, col="red",
                    xlab = paste("Ranking by", ses_dict[[ses_indicators[k]]]),
-                   ylab = paste("Health benefit rate:", 
-                                out_dict[[outcomes[j]]]))
+                   ylab = paste(y_lab, out_dict[[outcomes[j]]]))
       dev.off()
     }
   }
