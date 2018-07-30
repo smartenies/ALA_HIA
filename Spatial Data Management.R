@@ -265,6 +265,7 @@ acs$pct_over64 <- (acs$over64 / acs$total_pop) * 100
 # Non-white population (persons of color)
 acs$nhw <- acs$B03002e3 # non-Hispanic White only
 acs$poc <- acs$total_pop - acs$nhw # Total pop minus NHW
+acs$pct_nhw <- (acs$nhw / acs$total_pop) * 100
 acs$pct_poc <- (acs$poc / acs$total_pop) * 100
 
 #' Foreign born populations
@@ -302,15 +303,10 @@ acs$pct_hh_pov <- (acs$hh_pov / acs$total_hh) * 100
 acs$med_income <- acs$B19013e1
 
 #' Save new variables
-ses_vars <- c("GEOID", "total_pop", "under_5", "pct_under5", 
-              "over64", "pct_over64", "nhw", "poc", "pct_poc", 
-              "fb", "pct_fb", "over24", "less_hs", "hs_grad", 
-              "some_col", "assoc", "bach", "advanced",
-              "pct_less_hs", "pct_hs", "pct_college",
-              "total_hh", "limited_eng", "pct_limited_eng", 
-              "hh_pov", "pct_hh_pov", "med_income")
-
-acs <- acs[,c(1,11228:11253)]
+acs <- select(acs, GEOID, total_pop, pct_under5, 
+              pct_over64,pct_nhw, pct_poc, pct_fb, 
+              pct_less_hs, pct_hs, pct_college,
+              pct_limited_eng, pct_hh_pov, med_income)
 
 save(acs, file=paste("./Data/ACS_", years, "/ACS.RData", sep=""))
 write.table(acs, file="./HIA Inputs/ses indicators.txt")

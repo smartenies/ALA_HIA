@@ -169,6 +169,7 @@ ses_dict <- list(
   pct_hh_pov = "percentage of households in poverty",
   pct_less_hs = "percentage of adults over age 25 with\nless than a high school diploma",
   pct_limited_eng = "precentage of households speaking limited English",
-  pct_poc = "percentage of the population that is not non-Hispanic white"
+  pct_poc = "percentage of the population that is not non-Hispanic white",
+  pct_nhw = "percentage of the population that is non-Hispanic white alone"
 )
 

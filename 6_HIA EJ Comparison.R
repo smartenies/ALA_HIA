@@ -17,7 +17,8 @@
 #' The final results are saved as an Excel spreadsheet
 #' =============================================================================
 
-s <- 3
+#' HIA 
+s <- 7
 
 #' Load exposures
 load(paste("./HIA Inputs/", pre[s], "pm_zcta_metrics.RData", sep=""))

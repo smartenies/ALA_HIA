@@ -178,14 +178,16 @@ for (i in 1:length(pol_names)) {
     left_join(mean_df, by="GEOID10")
   
   plot(st_geometry(zcta))
+  
+  title_name <- ifelse(is.na(cmaq_scenario[s]), "", "Change in")
 
   ggplot(data=zcta) +
-    ggtitle(paste("Change in", season_map[1], pol_map[i], unit_map[i])) +
+    ggtitle(paste(title_name, season_map[1], pol_map[i], unit_map[i])) +
     geom_sf(aes(fill=wt_conc)) +
     geom_sf(data = pp, color = "red") +
     scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) + 
     simple_theme
-  ggsave(filename = paste("./HIA Outputs/Maps/Change in ", pre[s], pre[s+1],
+  ggsave(filename = paste("./HIA Outputs/Maps/", title_name, pre[s], pre[s+1],
                           season_map[1], "_", pol_map[i], ".jpeg", sep=""),
          device = "jpeg", dpi = 600)
   
@@ -211,12 +213,12 @@ for (i in 1:length(pol_names)) {
   plot(st_geometry(zcta))
   
   ggplot(data=zcta) +
-    ggtitle(paste("Change in", season_map[2], pol_map[i], unit_map[i])) +
+    ggtitle(paste(title_name, season_map[2], pol_map[i], unit_map[i])) +
     geom_sf(aes(fill=wt_conc)) +
     geom_sf(data = pp, color = "red") +
     scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) + 
     simple_theme
-  ggsave(filename = paste("./HIA Outputs/Maps/Change in ", pre[s], pre[s+1],
+  ggsave(filename = paste("./HIA Outputs/Maps/", title_name, pre[s], pre[s+1],
                           season_map[2], "_", pol_map[i], ".jpeg", sep=""),
          device = "jpeg", dpi = 600)
 }
@@ -268,8 +270,7 @@ write_xlsx(total_df,
 ses <- read.table(ses_file, header=T, stringsAsFactors = F) %>%
   mutate(GEOID = gsub("86000US", "", GEOID)) %>%
   dplyr::rename(zcta = GEOID) %>%
-  dplyr::select(zcta, total_pop, pct_poc, pct_less_hs, 
-                pct_limited_eng, pct_hh_pov, med_income)
+  dplyr::select(zcta, total_pop, pct_poc, pct_nhw, med_income)
 
 #' Clean up median impacts and calculate rate (for AI) and inverse rate (CI)
 impacts <- ungroup(combined_df) %>%
@@ -301,16 +302,19 @@ for (i in 1:length(unique(zcta_sf$pol))) {
   outcomes <- unique(zcta_pol$outcome)
   
   for (j in 1:length(outcomes)) {
+    scale_name <- ifelse(is.na(cmaq_scenario[s]), "Impacts\nper",
+                         "Avoided impacts\nper")
+    
     zcta_map <- zcta_pol %>%
       filter(outcome == outcomes[j]) %>%
       mutate(rate = ifelse(rate < 0, 0, rate))
     
     ggplot(data = zcta_map) +
-      ggtitle(paste("Health Benefit Rates:", out_dict[[outcomes[j]]])) +
+      ggtitle(paste("Attributable Outcome Rates:", out_dict[[outcomes[j]]])) +
       geom_sf(aes(fill = rate)) +
       geom_sf(data = pp, color = "red") +
       # stat_sf(data = pp, geom = "text") +
-      scale_fill_viridis(name = paste("Avoided impacts\nper", rate_pop)) +
+      scale_fill_viridis(name = paste(scale_name, rate_pop)) +
       simple_theme
     ggsave(filename = paste("./HIA Outputs/Maps/", pre[s], pre[s+1],
                             "/", unique(zcta_sf$pol)[i],
@@ -387,7 +391,9 @@ inequality <- atkinson %>%
   right_join(concentration, by=c("pol", "outcome")) %>%
   spread(ses_indic, CI_rate)
 
-colnames(inequality)[5:9] <- paste("CI_", colnames(inequality)[5:9], sep="")
+colnames(inequality)[5:ncol(inequality)] <- paste("CI_", 
+                                                  colnames(inequality)[5:ncol(inequality)], 
+                                                  sep="")
 
 save(inequality,
      file=paste("./HIA Outputs/", pre[s], pre[s+1], "zcta_inequality_benefits.RData",sep=""))
@@ -404,28 +410,37 @@ zcta_within_ids <- unique(zcta_within$GEOID10)
 rm(zcta, zcta_within)
 
 #' Plot SES variables
-load("./Data/Spatial Data/co_zcta.RData")
-zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
-  select(GEOID10) %>%
-  rename(zcta = GEOID10) %>% 
-  left_join(ses, by="zcta")
-
-plot(st_geometry(zcta))
-
-ggplot(data=zcta) +
-  ggtitle(paste("Median income at the ZCTA level")) +
-  geom_sf(aes(fill=med_income)) +
-  geom_sf(data = pp, color = "red") +
-  scale_fill_viridis(name = "Median income\n(2014$)") + 
-  simple_theme
-ggsave(filename = paste("./HIA Outputs/Maps/Median Income.jpeg", sep=""),
-       device = "jpeg", dpi = 600)
-
-ggplot(data=zcta) +
-  ggtitle(paste("Persons of Color")) +
-  geom_sf(aes(fill=pct_poc)) +
-  geom_sf(data = pp, color = "red") +
-  scale_fill_viridis(name = "Percentage\nof ZCTA population") + 
-  simple_theme
-ggsave(filename = paste("./HIA Outputs/Maps/Percent POC.jpeg", sep=""),
-       device = "jpeg", dpi = 600)
+# load("./Data/Spatial Data/co_zcta.RData")
+# zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
+#   select(GEOID10) %>%
+#   rename(zcta = GEOID10) %>%
+#   left_join(ses, by="zcta")
+# 
+# plot(st_geometry(zcta))
+# 
+# ggplot(data=zcta) +
+#   ggtitle(paste("Median income at the ZCTA level")) +
+#   geom_sf(aes(fill=med_income)) +
+#   geom_sf(data = pp, color = "red") +
+#   scale_fill_viridis(name = "Median income\n(2014$)") +
+#   simple_theme
+# ggsave(filename = paste("./HIA Outputs/Maps/Median Income.jpeg", sep=""),
+#        device = "jpeg", dpi = 600)
+# 
+# ggplot(data=zcta) +
+#   ggtitle(paste("Persons of Color")) +
+#   geom_sf(aes(fill=pct_poc)) +
+#   geom_sf(data = pp, color = "red") +
+#   scale_fill_viridis(name = "Percentage\nof ZCTA population") +
+#   simple_theme
+# ggsave(filename = paste("./HIA Outputs/Maps/Percent POC.jpeg", sep=""),
+#        device = "jpeg", dpi = 600)
+# 
+# ggplot(data=zcta) +
+#   ggtitle(paste("Persons that are non-Hispanic white alone")) +
+#   geom_sf(aes(fill=pct_nhw)) +
+#   geom_sf(data = pp, color = "red") +
+#   scale_fill_viridis(name = "Percentage\nof ZCTA population") +
+#   simple_theme
+# ggsave(filename = paste("./HIA Outputs/Maps/Percent NHW.jpeg", sep=""),
+#        device = "jpeg", dpi = 600)

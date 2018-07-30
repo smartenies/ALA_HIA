@@ -51,9 +51,9 @@ for (s in 1:6) {
 
 gc()
 
-# for (s in 3:length(pre)) {
-for (s in 1:6) {
-  #' Summary of Exposures, Health Benefits, and Inequality
+for (s in 1:length(pre)) {
+# for (s in 1:6) {
+  #' Summary of Exposures, Health Benefits, and Inequality Analysis
   if(s %% 2 == 0) next
   source("5_HIA Summary.R")
 }
