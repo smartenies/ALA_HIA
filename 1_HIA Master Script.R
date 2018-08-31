@@ -33,8 +33,7 @@ source("0_HIA Header.R")
 #' Loop through each step in the HIA
 start <- Sys.time()
 
-# for (s in 3:length(pre)) {
-for (s in 1:6) {
+for (s in 11:length(pre)) {
   #' Assess exposures at the ZCTA level
   print(s)
   source("3_HIA Exp Assessment.R")
@@ -42,8 +41,7 @@ for (s in 1:6) {
 
 gc()
 
-# for (s in 3:length(pre)) {
-for (s in 1:6) {
+for (s in 11:length(pre)) {
   #' Run the MC analysis
   print(s)
   source("4_HIA Monte Carlo.R")
@@ -51,8 +49,7 @@ for (s in 1:6) {
 
 gc()
 
-for (s in 1:length(pre)) {
-# for (s in 1:6) {
+for (s in 11:length(pre)) {
   #' Summary of Exposures, Health Benefits, and Inequality Analysis
   if(s %% 2 == 0) next
   source("5_HIA Summary.R")

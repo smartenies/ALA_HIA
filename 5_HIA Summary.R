@@ -335,8 +335,7 @@ atkinson <- impacts  %>%
   summarise(mean_rate = mean(rate, na.rm=T),
             AI_rate = Atkinson(rate, parameter = 0.75, na.rm=T)) 
 
-#' Calculate CI using rates (CI uses risk of an adverse event, so make sure to 
-#' flip the interpretation)
+#' Calculate CI using rates 
 
 #' Merge median impacts with indicators of inequality
 impacts2 <- ungroup(combined_df) %>%
@@ -409,38 +408,3 @@ zcta_within_ids <- unique(zcta_within$GEOID10)
 
 rm(zcta, zcta_within)
 
-#' Plot SES variables
-# load("./Data/Spatial Data/co_zcta.RData")
-# zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
-#   select(GEOID10) %>%
-#   rename(zcta = GEOID10) %>%
-#   left_join(ses, by="zcta")
-# 
-# plot(st_geometry(zcta))
-# 
-# ggplot(data=zcta) +
-#   ggtitle(paste("Median income at the ZCTA level")) +
-#   geom_sf(aes(fill=med_income)) +
-#   geom_sf(data = pp, color = "red") +
-#   scale_fill_viridis(name = "Median income\n(2014$)") +
-#   simple_theme
-# ggsave(filename = paste("./HIA Outputs/Maps/Median Income.jpeg", sep=""),
-#        device = "jpeg", dpi = 600)
-# 
-# ggplot(data=zcta) +
-#   ggtitle(paste("Persons of Color")) +
-#   geom_sf(aes(fill=pct_poc)) +
-#   geom_sf(data = pp, color = "red") +
-#   scale_fill_viridis(name = "Percentage\nof ZCTA population") +
-#   simple_theme
-# ggsave(filename = paste("./HIA Outputs/Maps/Percent POC.jpeg", sep=""),
-#        device = "jpeg", dpi = 600)
-# 
-# ggplot(data=zcta) +
-#   ggtitle(paste("Persons that are non-Hispanic white alone")) +
-#   geom_sf(aes(fill=pct_nhw)) +
-#   geom_sf(data = pp, color = "red") +
-#   scale_fill_viridis(name = "Percentage\nof ZCTA population") +
-#   simple_theme
-# ggsave(filename = paste("./HIA Outputs/Maps/Percent NHW.jpeg", sep=""),
-#        device = "jpeg", dpi = 600)
