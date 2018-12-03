@@ -11,7 +11,8 @@
 #' Martin Drake (in Colorado Springs, CO). The facilities are slated to be 
 #' decommissioned by 2025.
 #' 
-#' This script makes a map of the study area
+#' This script makes a map of the study area and all other figures for the 
+#' report and mansucript
 #' -----------------------------------------------------------------------------
 
 library(sf)
@@ -24,6 +25,10 @@ library(tidyverse)
 library(readxl)
 library(writexl)
 library(viridis)
+
+#' Google API for ggmap
+google_api_key <- "AIzaSyA_eKisw1HJSG0umLvCzgQI8bekuhpN5Cc"
+register_google(key = google_api_key)
 
 #' For ggplots
 simple_theme <- theme(
@@ -44,8 +49,25 @@ simple_theme <- theme(
 windowsFonts(Calibri=windowsFont("TT Calibri"))
 options(scipen = 9999) #avoid scientific notation
 
-geo_data <- "T:/Rsch-MRS/ECHO/SEM Large Data/Spatial Data/"
-utm_13 <- "+init=epsg:26913"
+map_theme <- theme(
+  #aspect.ratio = 1,
+  text  = element_text(family="Calibri",size = 12, color = 'black'),
+  panel.spacing.y = unit(0,"cm"),
+  panel.spacing.x = unit(0.25, "lines"),
+  panel.grid.minor = element_line(color = "transparent"),
+  panel.grid.major = element_line(color = "transparent"),
+  panel.border=element_rect(fill = NA),
+  panel.background=element_blank(),
+  axis.ticks = element_blank(),
+  axis.text.x = element_blank(),
+  axis.text.y = element_blank(),
+  # legend.position = c(0.1,0.1),
+  plot.margin=grid::unit(c(0,0,0,0), "mm"),
+  legend.key = element_blank()
+)
+windowsFonts(Calibri=windowsFont("TT Calibri"))
+options(scipen = 9999) #avoid scientific notation
+
 albers <- "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
 ll_nad83 <- "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
 ll_wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
@@ -73,59 +95,37 @@ cmaq_sf <- st_as_sf(cmaq_p) %>%
 
 cmaq_envelop <- st_convex_hull(st_union(cmaq_sf))
 
-base_map <- get_map(location = "Wigwam, Colorado", zoom = 7)
+base_map <- get_map(location = "Colorado Springs, Colorado", zoom = 7)
 ggmap(base_map)
 
-#' Note: Google uses Psuudo-Mercator (EPSG = 3857)
-#' See: https://stackoverflow.com/questions/47749078/how-to-put-a-geom-sf-produced-map-on-top-of-a-ggmap-produced-raster
-
-zcta_map <- st_transform(zcta_sf, 3857)
-zcta_bound <- st_transform(zcta_union, 3857)
-cmaq_bound <- st_transform(cmaq_envelop, 3857)
-plants <- st_transform(pp_sf, 3857)
-
-#' Define a function to fix the bbox to be in EPSG:3857
-#' Source of this function code is above
-ggmap_bbox <- function(map) {
-  if (!inherits(map, "ggmap")) stop("map must be a ggmap object")
-  # Extract the bounding box (in lat/lon) from the ggmap to a numeric vector, 
-  # and set the names to what sf::st_bbox expects:
-  map_bbox <- setNames(unlist(attr(map, "bb")), 
-                       c("ymin", "xmin", "ymax", "xmax"))
-  
-  # Coonvert the bbox to an sf polygon, transform it to 3857, 
-  # and convert back to a bbox (convoluted, but it works)
-  bbox_3857 <- st_bbox(st_transform(st_as_sfc(st_bbox(map_bbox, crs = 4326)), 3857))
-  
-  # Overwrite the bbox of the ggmap object with the transformed coordinates 
-  attr(map, "bb")$ll.lat <- bbox_3857["ymin"]
-  attr(map, "bb")$ll.lon <- bbox_3857["xmin"]
-  attr(map, "bb")$ur.lat <- bbox_3857["ymax"]
-  attr(map, "bb")$ur.lon <- bbox_3857["xmax"]
-  map
-}
-
-base_map2 <- ggmap_bbox(base_map)
-
-ggmap(base_map2) +
-  coord_sf(crs = st_crs(3857)) +
-  geom_sf(data = zcta_bound, aes(color = "zcta"), fill=NA, inherit.aes = F) +
-  geom_sf(data = cmaq_bound, aes(color = "cmaq"), fill=NA, inherit.aes = F) +
-  geom_sf(data = plants, color="red", inherit.aes = F) +
+ggmap(base_map) +
+  geom_sf(data = zcta_union, aes(color = "zcta"), fill=NA, size = 0.5,
+          inherit.aes = F) +
+  geom_sf(data = cmaq_envelop, aes(color = "cmaq"), fill=NA, size = 0.5,
+          inherit.aes = F) +
+  geom_sf(data = pp_sf, color="red", size = 2, inherit.aes = F) +
+  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
+               nudge_y = -0.1, color = "red") +
   scale_color_manual(name = "Boundary",
                      labels = c("zcta" = "Study area",
-                                "cmaq" = "CMAQ grid"),
+                                "cmaq" = "CMAQ subgrid"),
                      values = c("zcta" = "blue",
                                 "cmaq" = "magenta")) +
+  map_theme +
   theme(legend.position = c(0.8, 0.8),
-        plot.margin=grid::unit(c(0,0,0,0), "mm"),
-        axis.text.y = element_text(angle = 90, vjust = 1)) +
+        plot.margin=grid::unit(c(0,0,0,0), "mm")) +
   xlab("") + ylab("") +
-  coord_sf(crs = st_crs(3857), ylim = c(4426000, 4938500), 
-           xlim = c(-11908000, -11360000)) +
-  north(x.min = -11908000, x.max = -11360000,
-        y.min = 4426000, y.max = 4938500, location = "topright", symbol = 3)
-ggsave(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Report/Figures/Study Area Map v2.jpeg", 
+  coord_sf(ylim = c(36.8, 40.5), 
+           xlim = c(-106.5, -102)) +
+  north(x.min = -106.5, x.max = -102,
+        y.min =  36.8, y.max = 40.5,
+        symbol = 12, location = "bottomright", scale = 0.075,
+        anchor = c(x = -102.75, y = 37.25)) +
+  scalebar(x.min = -106.5, x.max = -102,
+           y.min =  36.8, y.max = 40.5,
+           dist = 30, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.75, y = 37.0))
+ggsave(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Study Area Map.jpeg", 
        device = "jpeg", dpi=500, units = "in", height = 5, width = 5)
 
 #' -----------------------------------------------------------------------------
