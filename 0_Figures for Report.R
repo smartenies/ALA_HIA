@@ -151,6 +151,9 @@ zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
 
 plot(st_geometry(zcta))
 
+summary(zcta)
+
+
 ggplot(data=zcta) +
   ggtitle(paste("Median income at the ZCTA level")) +
   geom_sf(aes(fill=med_income)) +

@@ -196,10 +196,11 @@ out_dict <- list(
 #' SES indicator dictionary
 ses_dict <- list(
   med_income = "median income",
-  pct_hh_pov = "percentage of households in poverty",
-  pct_less_hs = "percentage of adults over age 25 with\nless than a high school diploma",
-  pct_limited_eng = "precentage of households speaking limited English",
+  pct_hh_above_pov = "percentage of households with income above poverty level",
+  pct_hs_grad = "percentage of adults over age 25 with\nat least a high school diploma",
+  pct_hh_not_limited_eng = "precentage of households not speaking limited English",
   pct_poc = "percentage of the population that is not non-Hispanic white",
-  pct_nhw = "percentage of the population that is non-Hispanic white alone"
+  pct_nhw = "percentage of the population that is non-Hispanic white alone",
+  pct_employed = "percentage of the civilian workforce that is employed"
 )
 

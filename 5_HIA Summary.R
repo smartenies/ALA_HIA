@@ -270,22 +270,22 @@ write_xlsx(total_df,
 ses <- read.table(ses_file, header=T, stringsAsFactors = F) %>%
   mutate(GEOID = gsub("86000US", "", GEOID)) %>%
   dplyr::rename(zcta = GEOID) %>%
-  dplyr::select(zcta, total_pop, pct_poc, pct_nhw, med_income)
+  dplyr::select(zcta, total_pop, pct_poc, pct_nhw, med_income, 
+                pct_hs_grad, pct_employed, pct_hh_not_limited_eng)
 
-#' Clean up median impacts and calculate rate (for AI) and inverse rate (CI)
+#' Clean up median impacts and calculate benefit rate
 impacts <- ungroup(combined_df) %>%
   left_join(ses, by="zcta") %>% 
   select(zcta, pol, outcome, median_scaled, total_pop) %>% 
   mutate(pol = as.character(pol)) %>%
-  mutate(rate = (median_scaled / total_pop) * rate_pop) %>% 
-  mutate(inv_rate = 1 / rate)
+  mutate(rate = (median_scaled / total_pop) * rate_pop)
 
 zcta_ids <- unique(impacts$zcta)
 
 #' Map outcome rates across ZCTA's
 load("./Data/Spatial Data/co_zcta.RData")
 
-zcta_sf <- filter(co_zcta, GEOID10 %in% zcta$GEOID10) %>%
+zcta_sf <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
   dplyr::rename(zcta = GEOID10) %>%
   select(zcta) %>%
   mutate(zcta = as.character(zcta)) %>%
@@ -329,7 +329,7 @@ for (i in 1:length(unique(zcta_sf$pol))) {
 #' we want to stick with benefits-- higher benefit rates are better)
 
 atkinson <- impacts  %>%
-  select(pol, outcome, rate, inv_rate) %>%
+  select(pol, outcome, rate) %>%
   mutate(rate = ifelse(rate < 0, NA, rate)) %>%
   group_by(pol, outcome) %>%
   summarise(mean_rate = mean(rate, na.rm=T),
@@ -342,7 +342,7 @@ impacts2 <- ungroup(combined_df) %>%
   select(zcta, pol, outcome, median_scaled) %>%
   mutate(pol = as.character(pol)) %>%
   left_join(ses, by="zcta") %>% 
-  gather(ses_indic, ses_value, pct_poc:med_income) %>%
+  gather(ses_indic, ses_value, pct_poc:pct_hh_not_limited_eng) %>%
   mutate(rate = (median_scaled / total_pop) * rate_pop)
 
 concentration <- impacts2  %>%
@@ -370,7 +370,7 @@ for (i in 1:length(unique(impacts2$pol))) {
     
     for (k in 1:length(ses_indicators)) {
       y_lab <- ifelse(is.na(cmaq_scenario[s]), "Health impact rate:",
-                      "Health benefit rate")
+                      "Health benefit rate:")
       
       zcta_ses <- filter(zcta_map, ses_indic == ses_indicators[k])
       

@@ -239,74 +239,96 @@ save(acs, file=paste("./Data/ACS_", years, "/ACS.RData", sep=""))
 #'  B16002e7     Other Indo_European speaking households, limited English
 #'  B16002e10    Asian/PI speaking households, limited English
 #'  B16002e13    Other language speaking households, limited English
-#'  
+#'
 #'  B17017e2     Households in poverty
 #'  
 #'  B19013e1     Median household income (2014 inflation-adjusted $)
+#'  
+#'  B23025e3     Population 16+ in the civilian work force
+#'  B23025e5     Population 16+ in the civilian work force that are unemployed
+#'  
+#'  B25035e1	   Median year built for housing
 #' -----------------------------------------------------------------------------
 
 years <- "2010_2014"
 
 load(file=paste("./Data/ACS_", years, "/ACS.RData", sep=""))
 
+acs2 <- acs
+
 # Total census tract population
-acs$total_pop <- acs$B01001e1 
+acs2$total_pop <- acs2$B01001e1 
 
 # Population under 5 years
-acs$under5 <- acs$B01001e3 + acs$B01001e27
-acs$pct_under5 <- (acs$under5 / acs$total_pop) * 100
+acs2$under5 <- acs2$B01001e3 + acs2$B01001e27
+acs2$pct_under5 <- (acs2$under5 / acs2$total_pop) * 100
 
 # Population 65 years and older
-acs$over64 <- (acs$B01001e20 + acs$B01001e21 + acs$B01001e22 + acs$B01001e23 + 
-                 acs$B01001e24 + acs$B01001e25 + acs$B01001e44 + acs$B01001e45 + 
-                 acs$B01001e46 + acs$B01001e47 + acs$B01001e48 + acs$B01001e49) 
-acs$pct_over64 <- (acs$over64 / acs$total_pop) * 100
+acs2$over64 <- (acs2$B01001e20 + acs2$B01001e21 + acs2$B01001e22 + acs2$B01001e23 + 
+                 acs2$B01001e24 + acs2$B01001e25 + acs2$B01001e44 + acs2$B01001e45 + 
+                 acs2$B01001e46 + acs2$B01001e47 + acs2$B01001e48 + acs2$B01001e49) 
+acs2$pct_over64 <- (acs2$over64 / acs2$total_pop) * 100
 
 # Non-white population (persons of color)
-acs$nhw <- acs$B03002e3 # non-Hispanic White only
-acs$poc <- acs$total_pop - acs$nhw # Total pop minus NHW
-acs$pct_nhw <- (acs$nhw / acs$total_pop) * 100
-acs$pct_poc <- (acs$poc / acs$total_pop) * 100
+acs2$nhw <- acs2$B03002e3 # non-Hispanic White only
+acs2$poc <- acs2$total_pop - acs2$nhw # Total pop minus NHW
+acs2$pct_nhw <- (acs2$nhw / acs2$total_pop) * 100
+acs2$pct_poc <- (acs2$poc / acs2$total_pop) * 100
 
 #' Foreign born populations
-acs$fb <- acs$B05002e13 #Foreign born
-acs$pct_fb <- (acs$fb / acs$total_pop) * 100
+acs2$fb <- acs2$B05002e13 #Foreign born
+acs2$pct_fb <- (acs2$fb / acs2$total_pop) * 100
 
 #' Educational attainment (adults ages 25 and older)
-acs$over24 <- acs$B15003e1
-acs$less_hs <- acs$B15003e2 + acs$B15003e3 + acs$B15003e4 +
-  acs$B15003e5 + acs$B15003e6 + acs$B15003e7 + acs$B15003e8 +
-  acs$B15003e9 + acs$B15003e10 + acs$B15003e11 + acs$B15003e12 +
-  acs$B15003e13 + acs$B15003e14 + acs$B15003e15 +
-  acs$B15003e16
-acs$hs_grad <- acs$B15003e17 + acs$B15003e18
-acs$some_col <- acs$B15003e19 + acs$B15003e20
-acs$assoc <- acs$B15003e21
-acs$bach <- acs$B15003e22
-acs$advanced <- acs$B15003e23 + acs$B15003e24 + acs$B15003e25
+acs2$over24 <- acs2$B15003e1
+acs2$less_hs <- acs2$B15003e2 + acs2$B15003e3 + acs2$B15003e4 +
+  acs2$B15003e5 + acs2$B15003e6 + acs2$B15003e7 + acs2$B15003e8 +
+  acs2$B15003e9 + acs2$B15003e10 + acs2$B15003e11 + acs2$B15003e12 +
+  acs2$B15003e13 + acs2$B15003e14 + acs2$B15003e15 +
+  acs2$B15003e16
+acs2$hs_grad <- acs2$B15003e17 + acs2$B15003e18
+acs2$some_col <- acs2$B15003e19 + acs2$B15003e20
+acs2$assoc <- acs2$B15003e21
+acs2$bach <- acs2$B15003e22
+acs2$advanced <- acs2$B15003e23 + acs2$B15003e24 + acs2$B15003e25
 
-acs$pct_less_hs <- (acs$less_hs / acs$over24) * 100
-acs$pct_hs <- (acs$hs_grad / acs$over24) * 100
-acs$pct_college <- ((acs$bach + acs$advanced) / acs$over24) * 100
+acs2$pct_less_hs <- (acs2$less_hs / acs2$over24) * 100
+acs2$pct_hs <- (acs2$hs_grad / acs2$over24) * 100
+acs2$pct_college <- ((acs2$bach + acs2$advanced) / acs2$over24) * 100
+
+acs2$pct_hs_grad <- 100 - acs2$pct_less_hs
 
 #' Linguistic isolation (limited English at household level)
-acs$total_hh <- acs$B16002e1
-acs$limited_eng <- acs$B16002e4 + acs$B16002e7 + acs$B16002e10 +
-  acs$B16002e13
-acs$pct_limited_eng <- (acs$limited_eng / acs$total_hh) * 100
+acs2$total_hh <- acs2$B16002e1
+acs2$limited_eng <- acs2$B16002e4 + acs2$B16002e7 + acs2$B16002e10 +
+  acs2$B16002e13
+acs2$pct_hh_limited_eng <- (acs2$limited_eng / acs2$total_hh) * 100
+acs2$pct_hh_not_limited_eng <- 100 - acs2$pct_hh_limited_eng
+
+#' Uneploylment
+acs2$civ_wf <- acs2$B23025e3
+acs2$unemp <- acs2$B23025e5
+acs2$pct_unemployed <- (acs2$unemp / acs2$civ_wf) * 100
+acs2$pct_employed <- 100 - acs2$pct_unemployed
 
 #' Households with past year income below poverty level
-acs$hh_pov <- acs$B17017e2
-acs$pct_hh_pov <- (acs$hh_pov / acs$total_hh) * 100
+acs2$hh_pov <- acs2$B17017e2
+acs2$pct_hh_pov <- (acs2$hh_pov / acs2$total_hh) * 100
+acs2$pct_hh_above_pov <- 100 - acs2$pct_hh_pov
 
 #' Median household income (2014 inflation-adjusted dollars)
-acs$med_income <- acs$B19013e1
+acs2$med_income <- acs2$B19013e1
 
 #' Save new variables
-acs <- select(acs, GEOID, total_pop, pct_under5, 
-              pct_over64,pct_nhw, pct_poc, pct_fb, 
-              pct_less_hs, pct_hs, pct_college,
-              pct_limited_eng, pct_hh_pov, med_income)
+var_cols <- c("GEOID", "total_pop", "pct_under5", "pct_over64", 
+              "pct_nhw", "pct_poc", "pct_fb",
+              "pct_less_hs", "pct_hs_grad",
+              "pct_hh_pov", "pct_hh_above_pov",
+              "pct_unemployed", "pct_employed", 
+              "pct_hh_limited_eng", "pct_hh_not_limited_eng", 
+              "med_income")
 
-save(acs, file=paste("./Data/ACS_", years, "/ACS.RData", sep=""))
-write.table(acs, file="./HIA Inputs/ses indicators.txt")
+acs2 <- acs2[,var_cols]
+
+save(acs2, file=paste("./Data/acs_", years, "/acs2.RData", sep=""))
+write.table(acs2, file="./HIA Inputs/ses indicators.txt")

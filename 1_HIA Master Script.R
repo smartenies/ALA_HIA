@@ -41,7 +41,7 @@ for (s in 11:length(pre)) {
 
 gc()
 
-for (s in 11:length(pre)) {
+for (s in 1:length(pre)) {
   #' Run the MC analysis
   print(s)
   source("4_HIA Monte Carlo.R")
@@ -49,7 +49,7 @@ for (s in 11:length(pre)) {
 
 gc()
 
-for (s in 11:length(pre)) {
+for (s in 1:length(pre)) {
   #' Summary of Exposures, Health Benefits, and Inequality Analysis
   if(s %% 2 == 0) next
   source("5_HIA Summary.R")
