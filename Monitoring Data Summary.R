@@ -75,18 +75,14 @@ lat_long <- "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
 # Identifying air monitors
 #' -----------------------------------------------------------------------------
 
-aqs_full <- read.csv("./Data/AQS Data/AQS Data 2009-2017.csv", header=T,
+pm_full <- read.csv("./Data/AQS Data/AQS Data 2009-2017.csv", header=T,
                      stringsAsFactors = F)
 
-aqs_full$State.Code <- str_pad(aqs_full$State.Code, width=2, pad="0")
-aqs_full$County.Code <- str_pad(aqs_full$County.Code, width=3, pad="0")
-aqs_full$Site.Num <- str_pad(aqs_full$Site.Num, width=4, pad="0")
 
-aqs_full$monitor_id <- paste(aqs_full$State.Code, aqs_full$County.Code,
-                             aqs_full$Site.Num, sep="")
-
-#' Monitor IDs (08041**** are in El Paso county and 081010015 is in Pueblo)
-sfr_ids <- c("080410013", "080410015", "080410016", "080410017", "081010015")
+#' Monitor IDs 08041* are in El Paso county and 08101* are in Pueblo
+#' Monitor IDs 08031* are in Denver 
+sfr_ids <- c("080410013", "080410015", "080410016", "080410017", "081010015",
+             )
 
 aqs_sfr <- aqs_full[which(aqs_full$monitor_id %in% sfr_ids),] 
 
