@@ -18,6 +18,7 @@
 library(sf)
 library(raster)
 library(ggplot2)
+library(ggrepel)
 library(ggmap)
 library(ggsn)
 library(ggthemes)
@@ -131,6 +132,23 @@ zcta_union <- st_union(zcta_sf)
 head(zcta_union)
 plot(st_geometry(zcta_union))
 
+#' Springs ZCTAs and Pueblo ZCTAs
+springs_zips <- c("80938", "80939", "80951", "80918", "80919", "80920",
+                  "80921", "80922", "80923", "80924", "80925", "80926",
+                  "80927", "80929", "80903", "80904", "80905", "80906", 
+                  "80907", "80908", "80909", "80910", "80911", "80914",
+                  "80915", "80916", "80917", "80809", "80829", "80831",
+                  "80840", "80913", "80817", "80925", "80929")
+
+springs_zcta <- filter(zcta_sf, GEOID10 %in% springs_zips)
+plot(st_geometry(springs_zcta))
+
+pueblo_zips <- c("81001", "81003", "81004", "81005", "81006",
+                 "81007", "81008", "81022", "81025")
+
+pueblo_zcta <- filter(zcta_sf, GEOID10 %in% pueblo_zips)
+plot(st_geometry(pueblo_zcta))
+
 #' Get receptor points from the Winter Baseline case
 load("./HIA Inputs/HIA_Winter_cmaq_spatial.RData")
 cmaq_sf <- st_as_sf(cmaq_p) %>% 
@@ -142,21 +160,35 @@ base_map <- get_map(location = "Colorado Springs, Colorado", zoom = 7)
 ggmap(base_map)
 
 ggmap(base_map, darken = c(0.45, "white")) +
-  geom_sf(data = zcta_sf, aes(color = "zcta"), fill=NA, size = 0.2,
+  geom_sf(data = zcta_union, aes(color = "zcta", fill="zcta"), size = 0.5,
           inherit.aes = F, show.legend = "polygon") +
-  # geom_sf(data = cmaq_envelop, aes(color = "cmaq"), fill=NA, size = 0.5,
-  #         inherit.aes = F) +
-  geom_sf(data = pp_sf, aes(color="pp"), size = 2, inherit.aes = F, 
+  geom_sf(data = springs_zcta, aes(color = "springs", fill="springs"), 
+          inherit.aes = F, show.legend = "polygon", alpha = 0.3, size = 0.25) +
+  geom_sf(data = pueblo_zcta, aes(color = "pueblo", fill="pueblo"), 
+          inherit.aes = F, show.legend = "polygon", alpha = 0.3, size = 0.25) +
+  geom_sf(data = pp_sf, color="red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.1, color = "red") +
+  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+                  colour = "red", segment.colour = "red",
+                  inherit.aes = F, show.legend = F) +
   scale_color_manual(name = NULL,
-                     labels = c("zcta" = "ZCTA boundaries",
-                                "pp" = "Power plants"),
+                     labels = c("zcta" = "All ZCTAs",
+                                "springs" = "Colorado Springs ZCTAs",
+                                "pueblo" = "Pueblo ZCTAs"),
                      values = c("zcta" = "blue",
-                                "pp" = "red"),
-                     guide = guide_legend(override.aes = list(linetype = c("blank", "solid"), 
-                                                              shape = c(16, NA)))) +
+                                "springs" = "darkgreen",
+                                "pueblo" = "orange")) +
+  scale_fill_manual(name = NULL,
+                     labels = c("zcta" = "All ZCTAs",
+                                "springs" = "Colorado Springs ZCTAs",
+                                "pueblo" = "Pueblo ZCTAs"),
+                     values = c("zcta" = NA,
+                                "springs" = "darkgreen",
+                                "pueblo" = "orange"),
+                     guide = guide_legend(override.aes = list(linetype = c("blank", "blank", "solid"), 
+                                                              color = c("orange", "darkgreen", "blue"),
+                                                              shape = c(NA, NA, NA)))) +
   map_theme +
   theme(legend.position = c(0.8, 0.8),
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
@@ -216,11 +248,13 @@ plot(pm_winter_zcta["wt_conc"])
 pm_winter <- ggplot() +
   geom_sf(data = pm_winter_zcta, aes(fill = wt_conc), inherit.aes = F,
           color = NA) +
-  geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
-          show.legend = F) +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.1, color = "red") +
-  scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) + 
+  # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
+  #         show.legend = "point") +
+  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+                  colour = "red", segment.colour = "red", segment.size = 0.3,
+                  inherit.aes = F, show.legend = F) +
+  scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
   map_theme +
   theme(legend.position = c(0.8, 0.8),
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
@@ -234,7 +268,8 @@ pm_winter <- ggplot() +
   scalebar(x.min = -106.5, x.max = -102,
            y.min =  36.8, y.max = 40.5,
            dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.75, y = 37.0), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+pm_winter
 
 #' PM2.5, Summer
 s <- 8
@@ -261,11 +296,16 @@ plot(pm_summer_zcta["wt_conc"])
 pm_summer <- ggplot() +
   geom_sf(data = pm_summer_zcta, aes(fill = wt_conc), inherit.aes = F,
           color = NA) +
-  geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
-          show.legend = F) +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.1, color = "red") +
-  scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) + 
+  # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
+  #         show.legend = "point") +
+  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+                  colour = "red", segment.colour = "red", segment.size = 0.3,
+                  inherit.aes = F, show.legend = F) +
+  scale_fill_viridis(name = paste(pol_map[i], unit_map[i]), 
+                     breaks = c(min(pm_summer_zcta$wt_conc), 0.1, 0.2, 0.3, 0.4),
+                     labels = c(round(min(pm_summer_zcta$wt_conc),1), 
+                                "0.1", "0.2", "0.3", "0.4")) + 
   map_theme +
   theme(legend.position = c(0.8, 0.8),
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
@@ -279,7 +319,8 @@ pm_summer <- ggplot() +
   scalebar(x.min = -106.5, x.max = -102,
            y.min =  36.8, y.max = 40.5,
            dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.75, y = 37.0), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+pm_summer
 
 #' ozone, Winter
 s <- 7
@@ -306,11 +347,16 @@ plot(o3_winter_zcta["wt_conc"])
 o3_winter <- ggplot() +
   geom_sf(data = o3_winter_zcta, aes(fill = wt_conc), inherit.aes = F,
           color = NA) +
-  geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
-          show.legend = F) +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.1, color = "red") +
-  scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) + 
+  # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
+  #         show.legend = "point") +
+  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+                  colour = "red", segment.colour = "red", segment.size = 0.3,
+                  inherit.aes = F, show.legend = F) +
+  scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
+                     breaks = c(max(o3_winter_zcta$wt_conc), -0.1, -0.2, -0.3, -0.4),
+                     labels = c(round(max(o3_winter_zcta$wt_conc),1), 
+                                "-0.1", "-0.2", "-0.3", "-0.4")) + 
   map_theme +
   theme(legend.position = c(0.8, 0.8),
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
@@ -324,7 +370,8 @@ o3_winter <- ggplot() +
   scalebar(x.min = -106.5, x.max = -102,
            y.min =  36.8, y.max = 40.5,
            dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.75, y = 37.0), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+o3_winter
 
 #' O3, Summer
 s <- 8
@@ -351,10 +398,12 @@ plot(o3_summer_zcta["wt_conc"])
 o3_summer <- ggplot() +
   geom_sf(data = o3_summer_zcta, aes(fill = wt_conc), inherit.aes = F,
           color = NA) +
-  geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
-          show.legend = F) +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.1, color = "red") +
+  # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
+  #         show.legend = "point") +
+  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+                  colour = "red", segment.colour = "red", segment.size = 0.3,
+                  inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) + 
   map_theme +
   theme(legend.position = c(0.8, 0.8),
@@ -369,7 +418,8 @@ o3_summer <- ggplot() +
   scalebar(x.min = -106.5, x.max = -102,
            y.min =  36.8, y.max = 40.5,
            dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.75, y = 37.0), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+o3_summer
 
 
 #' Combine them!
@@ -381,7 +431,7 @@ hs1_maps_summer <- ggarrange(pm_summer, o3_summer,
 hs1_maps_summer
 ggsave(hs1_maps_summer,
        filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/HS1_Summer_Change_in_Exposure.jpeg", 
-       device = "jpeg", dpi=500, units = "in", height = 3, width = 6)
+       device = "jpeg", dpi=500, units = "in", height = 5, width = 7)
 
 hs1_maps_winter <- ggarrange(pm_winter, o3_winter, 
                              labels = c("A", "B"),
@@ -389,11 +439,7 @@ hs1_maps_winter <- ggarrange(pm_winter, o3_winter,
 hs1_maps_winter
 ggsave(hs1_maps_winter,
        filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/HS1_Winter_Change_in_Exposure.jpeg", 
-       device = "jpeg", dpi=500, units = "in", height = 3, width = 6)
-
-#' -----------------------------------------------------------------------------
-#' Time Series plots for monitors in the area
-#' -----------------------------------------------------------------------------
+       device = "jpeg", dpi=500, units = "in", height = 5, width = 7)
 
 #' -----------------------------------------------------------------------------
 #' Avoided premature deaths
@@ -447,13 +493,27 @@ ses <- read.table(ses_file, header=T, stringsAsFactors = F) %>%
                 pct_hs_grad, pct_employed, pct_hh_not_limited_eng)
 
 #' Clean up median impacts and calculate benefit rate
-impacts <- ungroup(combined_df) %>%
+all_impacts <- ungroup(combined_df) %>%
   left_join(ses, by="zcta") %>% 
   select(zcta, pol, outcome, median_scaled, total_pop) %>% 
   mutate(pol = as.character(pol)) %>%
   mutate(rate = (median_scaled / total_pop) * rate_pop)
 
-zcta_ids <- unique(impacts$zcta)
+springs_impacts <- ungroup(combined_df) %>%
+  left_join(ses, by="zcta") %>% 
+  filter(zcta %in% springs_zips) %>% 
+  select(zcta, pol, outcome, median_scaled, total_pop) %>% 
+  mutate(pol = as.character(pol)) %>%
+  mutate(rate = (median_scaled / total_pop) * rate_pop)
+
+pueblo_impacts <- ungroup(combined_df) %>%
+  left_join(ses, by="zcta") %>% 
+  filter(zcta %in% pueblo_zips) %>% 
+  select(zcta, pol, outcome, median_scaled, total_pop) %>% 
+  mutate(pol = as.character(pol)) %>%
+  mutate(rate = (median_scaled / total_pop) * rate_pop)
+
+zcta_ids <- unique(all_impacts$zcta)
 
 #' Map outcome rates across ZCTA's
 load("./Data/Spatial Data/co_zcta.RData")
@@ -462,7 +522,7 @@ hs1_zcta_sf <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
   dplyr::rename(zcta = GEOID10) %>%
   select(zcta) %>%
   mutate(zcta = as.character(zcta)) %>%
-  right_join(impacts, by="zcta") %>% 
+  right_join(all_impacts, by="zcta") %>% 
   st_transform(crs = ll_wgs84)
 
 hs1_ac_mort_sf <- filter(hs1_zcta_sf, outcome == "mort_ac")
@@ -474,6 +534,10 @@ plot(hs1_na_mort_sf["rate"])
 hs1_ac_mort <- ggplot() +
   geom_sf(data = hs1_ac_mort_sf, aes(fill = rate), inherit.aes = F,
           color = NA) +
+  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+                  colour = "red", segment.colour = "red", segment.size = 0.3,
+                  inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided deaths\nper 10,000") + 
   map_theme +
   theme(legend.position = c(0.8, 0.8),
@@ -488,12 +552,17 @@ hs1_ac_mort <- ggplot() +
   scalebar(x.min = -106.5, x.max = -102,
            y.min =  36.8, y.max = 40.5,
            dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.75, y = 37.0), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+hs1_ac_mort
 
 
 hs1_na_mort <- ggplot() +
   geom_sf(data = hs1_na_mort_sf, aes(fill = rate), inherit.aes = F,
           color = NA) +
+  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+                  colour = "red", segment.colour = "red", segment.size = 0.3,
+                  inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided deaths\nper 10,000") + 
   map_theme +
   theme(legend.position = c(0.8, 0.8),
@@ -508,7 +577,8 @@ hs1_na_mort <- ggplot() +
   scalebar(x.min = -106.5, x.max = -102,
            y.min =  36.8, y.max = 40.5,
            dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.75, y = 37.0), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+hs1_na_mort
 
 #' Health scenario 2 (s == 9 & 10)
 s <- 9
@@ -583,6 +653,10 @@ plot(hs2_na_mort_sf["rate"])
 hs2_ac_mort <- ggplot() +
   geom_sf(data = hs2_ac_mort_sf, aes(fill = rate), inherit.aes = F,
           color = NA) +
+  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+                  colour = "red", segment.colour = "red", segment.size = 0.3,
+                  inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided deaths\nper 10,000") + 
   map_theme +
   theme(legend.position = c(0.8, 0.8),
@@ -597,12 +671,16 @@ hs2_ac_mort <- ggplot() +
   scalebar(x.min = -106.5, x.max = -102,
            y.min =  36.8, y.max = 40.5,
            dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.75, y = 37.0), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
 
 
 hs2_na_mort <- ggplot() +
   geom_sf(data = hs2_na_mort_sf, aes(fill = rate), inherit.aes = F,
           color = NA) +
+  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+                  colour = "red", segment.colour = "red", segment.size = 0.3,
+                  inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided deaths\nper 10,000") + 
   map_theme +
   theme(legend.position = c(0.8, 0.8),
@@ -617,7 +695,7 @@ hs2_na_mort <- ggplot() +
   scalebar(x.min = -106.5, x.max = -102,
            y.min =  36.8, y.max = 40.5,
            dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.75, y = 37.0), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
 
 #' Combine them!
 library(ggpubr)
@@ -628,7 +706,7 @@ hs1_mortality <- ggarrange(hs1_ac_mort, hs1_na_mort,
 hs1_mortality
 ggsave(hs1_mortality,
        filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/HS1_Avoided_Deaths.jpeg", 
-       device = "jpeg", dpi=500, units = "in", height = 4, width = 7)
+       device = "jpeg", dpi=500, units = "in", height = 6, width = 8)
 
 hs2_mortality <- ggarrange(hs2_ac_mort, hs2_na_mort, 
                            labels = c("A", "B"),
@@ -636,7 +714,7 @@ hs2_mortality <- ggarrange(hs2_ac_mort, hs2_na_mort,
 hs2_mortality
 ggsave(hs2_mortality,
        filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/HS2_Avoided_Deaths.jpeg", 
-       device = "jpeg", dpi=500, units = "in", height = 4, width = 7)
+       device = "jpeg", dpi=500, units = "in", height = 6, width = 8)
 
 
 #' -----------------------------------------------------------------------------
@@ -702,13 +780,17 @@ plot(st_geometry(springs_impacts))
 plot(st_geometry(springs), border="red", add=T)
 
 #' Maps for Pueblo
-pueblo_poc <- ggplot(data = pueblo_impacts) +
-  geom_sf(data = pueblo_impacts, aes(fill = pct_poc), color = NA) +
+pueblo_nhw <- ggplot(data = pueblo_impacts) +
+  geom_sf(data = pueblo_impacts, aes(fill = pct_nhw), color = NA) +
   # geom_sf(data = pueblo, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Comanche"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = 0.2, nudge_y = 0.2,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Percentage") +
   map_theme2 +
   theme(legend.position = c(0.2, 0.8),
@@ -719,19 +801,51 @@ pueblo_poc <- ggplot(data = pueblo_impacts) +
   north(x.min = -105.2, x.max = -104.0,
         y.min =  37.8, y.max = 38.62,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -105.0, y = 37.95)) +
+        anchor = c(x = -105.0, y = 37.88)) +
   scalebar(x.min = -105.2, x.max = -104.0,
            y.min =  37.8, y.max = 38.62,
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -104.8, y = 37.87), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -104.8, y = 37.8), st.dist = 0.025)
+pueblo_nhw
+
+pueblo_poc <- ggplot(data = pueblo_impacts) +
+  geom_sf(data = pueblo_impacts, aes(fill = pct_poc), color = NA) +
+  # geom_sf(data = pueblo, fill=NA, color="red") +
+  geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
+          show.legend = "point") +
+  geom_label_repel(data = filter(pp_sf, id == "Comanche"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = 0.2, nudge_y = 0.2,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
+  scale_fill_viridis(name = "Percentage") +
+  map_theme2 +
+  theme(legend.position = c(0.2, 0.8),
+        plot.margin=grid::unit(c(0,0,0,0), "mm")) +
+  xlab("") + ylab("") +
+  coord_sf(ylim = c(37.8, 38.62),
+           xlim = c(-105.2, -104.0)) +
+  north(x.min = -105.2, x.max = -104.0,
+        y.min =  37.8, y.max = 38.62,
+        symbol = 12, location = "bottomright", scale = 0.075,
+        anchor = c(x = -105.0, y = 37.88)) +
+  scalebar(x.min = -105.2, x.max = -104.0,
+           y.min =  37.8, y.max = 38.62,
+           dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -104.8, y = 37.8), st.dist = 0.025)
 
 pueblo_income <- ggplot(data = pueblo_impacts) +
   geom_sf(data = pueblo_impacts, aes(fill = med_income/10000), color = NA) +
   # geom_sf(data = pueblo, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Comanche"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = 0.2, nudge_y = 0.2,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "2014$ (10,000's)") +
   map_theme2 +
   theme(legend.position = c(0.2, 0.8),
@@ -742,17 +856,23 @@ pueblo_income <- ggplot(data = pueblo_impacts) +
   north(x.min = -105.2, x.max = -104.0,
         y.min =  37.8, y.max = 38.62,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -105.0, y = 37.95)) +
+        anchor = c(x = -105.0, y = 37.88)) +
   scalebar(x.min = -105.2, x.max = -104.0,
            y.min =  37.8, y.max = 38.62,
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -104.8, y = 37.87), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -104.8, y = 37.8), st.dist = 0.025)
 
 pueblo_low_ed <- ggplot(data = pueblo_impacts) +
   geom_sf(data = pueblo_impacts, aes(fill = pct_less_hs), color = NA) +
   # geom_sf(data = pueblo, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
+  geom_label_repel(data = filter(pp_sf, id == "Comanche"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = 0.2, nudge_y = 0.2,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
                nudge_y = -0.05, color = "red") +
   scale_fill_viridis(name = "Percentage") +
@@ -765,19 +885,23 @@ pueblo_low_ed <- ggplot(data = pueblo_impacts) +
   north(x.min = -105.2, x.max = -104.0,
         y.min =  37.8, y.max = 38.62,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -105.0, y = 37.95)) +
+        anchor = c(x = -105.0, y = 37.88)) +
   scalebar(x.min = -105.2, x.max = -104.0,
            y.min =  37.8, y.max = 38.62,
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -104.8, y = 37.87), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -104.8, y = 37.8), st.dist = 0.025)
 
 pueblo_unemp <- ggplot(data = pueblo_impacts) +
   geom_sf(data = pueblo_impacts, aes(fill = pct_unemployed), color = NA) +
   # geom_sf(data = pueblo, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Comanche"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = 0.2, nudge_y = 0.2,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Percentage") +
   map_theme2 +
   theme(legend.position = c(0.2, 0.8),
@@ -788,19 +912,23 @@ pueblo_unemp <- ggplot(data = pueblo_impacts) +
   north(x.min = -105.2, x.max = -104.0,
         y.min =  37.8, y.max = 38.62,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -105.0, y = 37.95)) +
+        anchor = c(x = -105.0, y = 37.88)) +
   scalebar(x.min = -105.2, x.max = -104.0,
            y.min =  37.8, y.max = 38.62,
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -104.8, y = 37.87), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -104.8, y = 37.8), st.dist = 0.025)
 
 pueblo_limited_eng <- ggplot(data = pueblo_impacts) +
   geom_sf(data = pueblo_impacts, aes(fill = pct_hh_limited_eng), color = NA) +
   # geom_sf(data = pueblo, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Comanche"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = 0.2, nudge_y = 0.2,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Percentage") +
   map_theme2 +
   theme(legend.position = c(0.2, 0.8),
@@ -811,11 +939,11 @@ pueblo_limited_eng <- ggplot(data = pueblo_impacts) +
   north(x.min = -105.2, x.max = -104.0,
         y.min =  37.8, y.max = 38.62,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -105.0, y = 37.95)) +
+        anchor = c(x = -105.0, y = 37.88)) +
   scalebar(x.min = -105.2, x.max = -104.0,
            y.min =  37.8, y.max = 38.62,
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -104.8, y = 37.87), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -104.8, y = 37.8), st.dist = 0.025)
 
 pueblo_ac_mort_sf <- filter(pueblo_impacts, outcome == "mort_ac")
 pueblo_ac_mort <- ggplot() +
@@ -823,8 +951,12 @@ pueblo_ac_mort <- ggplot() +
   # geom_sf(data = pueblo, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Comanche"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = 0.2, nudge_y = 0.2,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided deaths per 10,000") +
   map_theme2 +
   theme(legend.position = c(0.25, 0.8),
@@ -835,11 +967,11 @@ pueblo_ac_mort <- ggplot() +
   north(x.min = -105.2, x.max = -104.0,
         y.min =  37.8, y.max = 38.62,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -105.0, y = 37.95)) +
+        anchor = c(x = -105.0, y = 37.88)) +
   scalebar(x.min = -105.2, x.max = -104.0,
            y.min =  37.8, y.max = 38.62,
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -104.8, y = 37.87), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -104.8, y = 37.8), st.dist = 0.025)
 
 pueblo_na_mort_sf <- filter(pueblo_impacts, outcome == "st_mort_na")
 pueblo_na_mort <- ggplot() +
@@ -847,8 +979,12 @@ pueblo_na_mort <- ggplot() +
   # geom_sf(data = pueblo, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Comanche"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = 0.2, nudge_y = 0.2,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided deaths per 10,000") +
   map_theme2 +
   theme(legend.position = c(0.25, 0.8),
@@ -859,11 +995,11 @@ pueblo_na_mort <- ggplot() +
   north(x.min = -105.2, x.max = -104.0,
         y.min =  37.8, y.max = 38.62,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -105.0, y = 37.95)) +
+        anchor = c(x = -105.0, y = 37.88)) +
   scalebar(x.min = -105.2, x.max = -104.0,
            y.min =  37.8, y.max = 38.62,
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -104.8, y = 37.87), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -104.8, y = 37.8), st.dist = 0.025)
 
 pueblo_cvd_sf <- filter(pueblo_impacts, outcome == "hosp_cvd")
 pueblo_cvd <- ggplot() +
@@ -871,8 +1007,12 @@ pueblo_cvd <- ggplot() +
   # geom_sf(data = pueblo, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Comanche"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = 0.2, nudge_y = 0.2,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided cases per 10,000") +
   map_theme2 +
   theme(legend.position = c(0.25, 0.8),
@@ -883,11 +1023,11 @@ pueblo_cvd <- ggplot() +
   north(x.min = -105.2, x.max = -104.0,
         y.min =  37.8, y.max = 38.62,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -105.0, y = 37.95)) +
+        anchor = c(x = -105.0, y = 37.88)) +
   scalebar(x.min = -105.2, x.max = -104.0,
            y.min =  37.8, y.max = 38.62,
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -104.8, y = 37.87), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -104.8, y = 37.8), st.dist = 0.025)
 
 pueblo_res_sf <- filter(pueblo_impacts, outcome == "hosp_res")
 pueblo_res <- ggplot() +
@@ -895,8 +1035,12 @@ pueblo_res <- ggplot() +
   # geom_sf(data = pueblo, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Comanche"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = 0.2, nudge_y = 0.2,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided cases per 10,000") +
   map_theme2 +
   theme(legend.position = c(0.25, 0.8),
@@ -907,21 +1051,25 @@ pueblo_res <- ggplot() +
   north(x.min = -105.2, x.max = -104.0,
         y.min =  37.8, y.max = 38.62,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -105.0, y = 37.95)) +
+        anchor = c(x = -105.0, y = 37.88)) +
   scalebar(x.min = -105.2, x.max = -104.0,
            y.min =  37.8, y.max = 38.62,
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -104.8, y = 37.87), st.dist = 0.025)
+           height = 0.02, anchor = c(x = -104.8, y = 37.8), st.dist = 0.025)
 
 
 #' Maps for Colorado Springs
-springs_poc <- ggplot(data = springs_impacts) +
-  geom_sf(data = springs_impacts, aes(fill = pct_poc), color = NA) +
+springs_nhw <- ggplot(data = springs_impacts) +
+  geom_sf(data = springs_impacts, aes(fill = pct_nhw), color = NA) +
   # geom_sf(data = springs, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Martin Drake"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = -0.2, nudge_y = -0.1,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Percentage") +
   map_theme2 +
   theme(legend.position = c(0.8, 0.3),
@@ -938,13 +1086,45 @@ springs_poc <- ggplot(data = springs_impacts) +
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
            height = 0.02, anchor = c(x = -104.3, y = 38.5), st.dist = 0.025)
 
+springs_poc <- ggplot(data = springs_impacts) +
+  geom_sf(data = springs_impacts, aes(fill = pct_poc), color = NA) +
+  # geom_sf(data = springs, fill=NA, color="red") +
+  geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
+          show.legend = "point") +
+  geom_label_repel(data = filter(pp_sf, id == "Martin Drake"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = -0.2, nudge_y = -0.1,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
+  scale_fill_viridis(name = "Percentage") +
+  map_theme2 +
+  theme(legend.position = c(0.8, 0.3),
+        plot.margin=grid::unit(c(0,0,0,0), "mm")) +
+  xlab("") + ylab("") +
+  coord_sf(ylim = c(38.5, 39.2),
+           xlim = c(-105.1, -104.3)) +
+  north(x.min = -105.1, x.max = -104.3,
+        y.min =  38.5, y.max = 39.2,
+        symbol = 12, location = "bottomright", scale = 0.075,
+        anchor = c(x = -104.3, y = 38.55)) +
+  scalebar(x.min = -105.1, x.max = -104.3,
+           y.min =  38.5, y.max = 39.2,
+           dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -104.3, y = 38.5), st.dist = 0.025)
+springs_poc
+
 springs_income <- ggplot(data = springs_impacts) +
   geom_sf(data = springs_impacts, aes(fill = med_income/10000), color = NA) +
   # geom_sf(data = springs, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Martin Drake"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = -0.2, nudge_y = -0.1,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "2014$ (10,000's)") +
   map_theme2 +
   theme(legend.position = c(0.8, 0.3),
@@ -966,8 +1146,12 @@ springs_low_ed <- ggplot(data = springs_impacts) +
   # geom_sf(data = springs, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Martin Drake"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = -0.2, nudge_y = -0.1,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Percentage") +
   map_theme2 +
   theme(legend.position = c(0.8, 0.3),
@@ -989,8 +1173,12 @@ springs_unemp <- ggplot(data = springs_impacts) +
   # geom_sf(data = springs, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Martin Drake"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = -0.2, nudge_y = -0.1,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Percentage") +
   map_theme2 +
   theme(legend.position = c(0.8, 0.3),
@@ -1012,8 +1200,12 @@ springs_limited_eng <- ggplot(data = springs_impacts) +
   # geom_sf(data = springs, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Martin Drake"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = -0.2, nudge_y = -0.1,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Percentage") +
   map_theme2 +
   theme(legend.position = c(0.8, 0.3),
@@ -1036,8 +1228,12 @@ springs_ac_mort <- ggplot() +
   # geom_sf(data = springs, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Martin Drake"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = -0.2, nudge_y = -0.1,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided deaths\nper 10,000") +
   map_theme2 +
   theme(legend.position = c(0.8, 0.3),
@@ -1060,8 +1256,12 @@ springs_na_mort <- ggplot() +
   # geom_sf(data = springs, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Martin Drake"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = -0.2, nudge_y = -0.1,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided deaths\nper 10,000") +
   map_theme2 +
   theme(legend.position = c(0.8, 0.3),
@@ -1084,8 +1284,12 @@ springs_cvd <- ggplot() +
   # geom_sf(data = springs, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Martin Drake"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = -0.2, nudge_y = -0.1,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided cases\nper 10,000") +
   map_theme2 +
   theme(legend.position = c(0.8, 0.3),
@@ -1108,8 +1312,12 @@ springs_res <- ggplot() +
   # geom_sf(data = springs, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
-  geom_sf_text(data = pp_sf, aes(label = id), inherit.aes = F,
-               nudge_y = -0.05, color = "red") +
+  geom_label_repel(data = filter(pp_sf, id == "Martin Drake"), 
+                   aes(label = id, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_x = -0.2, nudge_y = -0.1,
+                   colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided cases\nper 10,000") +
   map_theme2 +
   theme(legend.position = c(0.8, 0.3),
@@ -1128,13 +1336,13 @@ springs_res <- ggplot() +
 
 
 ses_plots <- ggarrange(
-  annotate_figure(ggarrange(pueblo_poc, pueblo_income, 
-                            labels = c("A: Persons of color", "B: Median income"), 
+  annotate_figure(ggarrange(springs_nhw, springs_income, 
+                            labels = c("A: Non-Hispanic White", "B: Median income"), ncol = 2, nrow = 1),
+                  left = text_grob("Colorado Springs", rot = 90, face = "bold")),
+  annotate_figure(ggarrange(pueblo_nhw, pueblo_income, 
+                            labels = c("C: Non-Hispanic White", "D: Median income"), 
                             ncol = 2, nrow = 1),
                   left = text_grob("Pueblo", rot = 90, face = "bold")),
-  annotate_figure(ggarrange(springs_poc, springs_income, 
-                            labels = c("C: Persons of color", "D: Median income"), ncol = 2, nrow = 1),
-                  left = text_grob("Colorado Springs", rot = 90, face = "bold")),
   ncol = 1, nrow = 2)
 ses_plots
 ggsave(ses_plots,
@@ -1142,16 +1350,16 @@ ggsave(ses_plots,
        device = "jpeg", dpi=500, units = "in", height = 8, width = 8)
 
 sup_ses_plots <- ggarrange(
-  annotate_figure(ggarrange(pueblo_low_ed, pueblo_limited_eng, pueblo_unemp, 
+  annotate_figure(ggarrange(springs_low_ed, springs_limited_eng, springs_unemp, 
                             labels = c("A: Low education", "B: Limited English",
                                        "C: Unemployment"), 
                             ncol = 3, nrow = 1),
-                  left = text_grob("Pueblo", rot = 90, face = "bold")),
-  annotate_figure(ggarrange(springs_low_ed, springs_limited_eng, springs_unemp, 
+                  left = text_grob("Colorado Springs", rot = 90, face = "bold")),
+  annotate_figure(ggarrange(pueblo_low_ed, pueblo_limited_eng, pueblo_unemp, 
                             labels = c("D: Low education", "E: Limited English",
                                        "F: Unemployment"), 
                             ncol = 3, nrow = 1),
-                  left = text_grob("Colorado Springs", rot = 90, face = "bold")),
+                  left = text_grob("Pueblo", rot = 90, face = "bold")),
   ncol = 1, nrow = 2)
 sup_ses_plots
 ggsave(sup_ses_plots,
@@ -1159,13 +1367,13 @@ ggsave(sup_ses_plots,
        device = "jpeg", dpi=500, units = "in", height = 8, width = 12)
 
 mort_plots <- ggarrange(
+  annotate_figure(ggarrange(springs_ac_mort, springs_na_mort, 
+                            labels = c("A: All-cause", "B: Non-accidental"), ncol = 2, nrow = 1),
+                  left = text_grob("Colorado Springs", rot = 90, face = "bold")),
   annotate_figure(ggarrange(pueblo_ac_mort, pueblo_na_mort, 
-                            labels = c("A: All-cause", "B: Non-accidental"), 
+                            labels = c("C: All-cause", "D: Non-accidental"), 
                             ncol = 2, nrow = 1),
                   left = text_grob("Pueblo", rot = 90, face = "bold")),
-  annotate_figure(ggarrange(springs_ac_mort, springs_na_mort, 
-                            labels = c("C: All-cause", "D: Non-accidental"), ncol = 2, nrow = 1),
-                  left = text_grob("Colorado Springs", rot = 90, face = "bold")),
   ncol = 1, nrow = 2)
 mort_plots
 ggsave(mort_plots,
@@ -1174,14 +1382,15 @@ ggsave(mort_plots,
 
 
 sup_hosp_plots <- ggarrange(
-  annotate_figure(ggarrange(pueblo_res, pueblo_cvd, 
-                            labels = c("A: Respiratory", "B: Cardiovascular"), 
-                            ncol = 2, nrow = 1),
-                  left = text_grob("Pueblo", rot = 90, face = "bold")),
   annotate_figure(ggarrange(springs_res, springs_cvd, 
                             labels = c("A: Respiratory", "B: Cardiovascular"),
                             ncol = 2, nrow = 1),
                   left = text_grob("Colorado Springs", rot = 90, face = "bold")),
+  annotate_figure(ggarrange(pueblo_res, pueblo_cvd, 
+                            labels = c("C: Respiratory", "D: Cardiovascular"), 
+                            ncol = 2, nrow = 1),
+                  left = text_grob("Pueblo", rot = 90, face = "bold")),
+
   ncol = 1, nrow = 2)
 sup_hosp_plots
 ggsave(sup_hosp_plots,
@@ -1231,9 +1440,22 @@ impacts2 <- ungroup(combined_df) %>%
   left_join(ses, by="zcta") %>% 
   gather(ses_indic, ses_value, pct_under5:med_income) %>%
   mutate(rate = (median_scaled / total_pop) * rate_pop) %>% 
-  mutate(rate = ifelse(rate < 0, NA, rate)) %>% 
-  group_by(ses_indic, outcome) 
+  mutate(rate = ifelse(rate < 0, NA, rate))
 
+#' Springs ZCTAs and Pueblo ZCTAs
+springs_zips <- c("80938", "80939", "80951", "80918", "80919", "80920",
+                  "80921", "80922", "80923", "80924", "80925", "80926",
+                  "80927", "80929", "80903", "80904", "80905", "80906", 
+                  "80907", "80908", "80909", "80910", "80911", "80914",
+                  "80915", "80916", "80917", "80809", "80829", "80831",
+                  "80840", "80913", "80817", "80925", "80929")
+
+springs_impacts <- filter(impacts2, zcta %in% springs_zips)
+
+pueblo_zips <- c("81001", "81003", "81004", "81005", "81006",
+                 "81007", "81008", "81022", "81025")
+
+pueblo_impacts <- filter(impacts2, zcta %in% pueblo_zips)
 
 concentration <- impacts2  %>%
   select(pol, outcome, ses_indic, ses_value, rate) %>%
@@ -1241,6 +1463,7 @@ concentration <- impacts2  %>%
   group_by(pol, outcome, ses_indic) %>%
   summarise(CI_rate = calcSConc(rate, ses_value)[[1]][[1]]) 
 
+#' ALL ZCTAS
 #' All-cause mortality plots
 mort_nhw <- filter(impacts2, ses_indic == "pct_nhw") %>% 
   filter(outcome == "mort_ac")
@@ -1295,15 +1518,15 @@ curveConcent(na_mort_hs_grad$rate, na_mort_hs_grad$ses_value, col="black", lty =
 curveConcent(na_mort_employed$rate, na_mort_employed$ses_value, col="blue", lty = 3, add = T)
 curveConcent(na_mort_eng$rate, na_mort_eng$ses_value, col="darkgreen", lty = 4, add = T)
 curveConcent(na_mort_income$rate, na_mort_income$ses_value, col="orange", lty = 5, add = T)
-legend(x = 0.48, y = 0.38, cex = 0.6,
-       title = "Indicator of ZCTA-level social advantage",
-       col = c("red", "black", "blue", "darkgreen", "orange"),
-       lty = c(1, 2, 3, 4, 5),
-       legend = c("Non-Hispanic white population",
-                  "High school graduates",
-                  "Employment",
-                  "Proficiency in English",
-                  "Median income (2014$)"))
+# legend(x = 0.48, y = 0.38, cex = 0.6,
+#        title = "Indicator of ZCTA-level social advantage",
+#        col = c("red", "black", "blue", "darkgreen", "orange"),
+#        lty = c(1, 2, 3, 4, 5),
+#        legend = c("Non-Hispanic white population",
+#                   "High school graduates",
+#                   "Employment",
+#                   "Proficiency in English",
+#                   "Median income (2014$)"))
 text(x = 0.05, y = 0.9, labels = c("B: Non-accidental mortality"), pos = 4)
 dev.off()
 
@@ -1361,6 +1584,40 @@ curveConcent(cvd_hs_grad$rate, cvd_hs_grad$ses_value, col="black", lty = 2, add 
 curveConcent(cvd_employed$rate, cvd_employed$ses_value, col="blue", lty = 3, add = T)
 curveConcent(cvd_eng$rate, cvd_eng$ses_value, col="darkgreen", lty = 4, add = T)
 curveConcent(cvd_income$rate, cvd_income$ses_value, col="orange", lty = 5, add = T)
+# legend(x = 0.48, y = 0.38, cex = 0.6,
+#        title = "Indicator of ZCTA-level social advantage",
+#        col = c("red", "black", "blue", "darkgreen", "orange"),
+#        lty = c(1, 2, 3, 4, 5),
+#        legend = c("Non-Hispanic white population",
+#                   "High school graduates",
+#                   "Employment",
+#                   "Proficiency in English",
+#                   "Median income (2014$)"))
+text(x = 0.05, y = 0.9, labels = c("B: Cardiovascular hospitalizations"), pos = 4)
+dev.off()
+
+#' SPRINGS ZCTAS
+#' All-cause mortality plots
+mort_nhw <- filter(springs_impacts, ses_indic == "pct_nhw") %>% 
+  filter(outcome == "mort_ac")
+mort_hs_grad <- filter(springs_impacts, ses_indic == "pct_hs_grad") %>% 
+  filter(outcome == "mort_ac")
+mort_employed <- filter(springs_impacts, ses_indic == "pct_employed") %>% 
+  filter(outcome == "mort_ac")
+mort_eng <- filter(springs_impacts, ses_indic == "pct_hh_not_limited_eng") %>% 
+  filter(outcome == "mort_ac")
+mort_income <- filter(springs_impacts, ses_indic == "med_income") %>% 
+  filter(outcome == "mort_ac")
+
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Springs_AC_Mort_Conc_Curves.jpeg",
+     width = 5, height = 5, units = "in", res = 500)
+curveConcent(mort_nhw$rate, mort_nhw$ses_value, col="red", lty = 1,
+             xlab = paste("Social advantage rank"),
+             ylab = paste("Cumulative benefits"))
+curveConcent(mort_hs_grad$rate, mort_hs_grad$ses_value, col="black", lty = 2, add = T)
+curveConcent(mort_employed$rate, mort_employed$ses_value, col="blue", lty = 3, add = T)
+curveConcent(mort_eng$rate, mort_eng$ses_value, col="darkgreen", lty = 4, add = T)
+curveConcent(mort_income$rate, mort_income$ses_value, col="orange", lty = 5, add = T)
 legend(x = 0.48, y = 0.38, cex = 0.6,
        title = "Indicator of ZCTA-level social advantage",
        col = c("red", "black", "blue", "darkgreen", "orange"),
@@ -1370,5 +1627,238 @@ legend(x = 0.48, y = 0.38, cex = 0.6,
                   "Employment",
                   "Proficiency in English",
                   "Median income (2014$)"))
+text(x = 0.05, y = 0.9, labels = c("A: All-cause mortality"), pos = 4)
+dev.off()
+
+#' non-accidental mortality plots
+na_mort_nhw <- filter(springs_impacts, ses_indic == "pct_nhw") %>% 
+  filter(outcome == "st_mort_na")
+na_mort_hs_grad <- filter(springs_impacts, ses_indic == "pct_hs_grad") %>% 
+  filter(outcome == "st_mort_na")
+na_mort_employed <- filter(springs_impacts, ses_indic == "pct_employed") %>% 
+  filter(outcome == "st_mort_na")
+na_mort_eng <- filter(springs_impacts, ses_indic == "pct_hh_not_limited_eng") %>% 
+  filter(outcome == "st_mort_na")
+na_mort_income <- filter(springs_impacts, ses_indic == "med_income") %>% 
+  filter(outcome == "st_mort_na")
+
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Springs_NA_Mort_Conc_Curves.jpeg",
+     width = 5, height = 5, units = "in", res = 500)
+curveConcent(na_mort_nhw$rate, na_mort_nhw$ses_value, col="red", lty = 1,
+             xlab = paste("Social advantage rank"),
+             ylab = paste("Cumulative benefits"))
+curveConcent(na_mort_hs_grad$rate, na_mort_hs_grad$ses_value, col="black", lty = 2, add = T)
+curveConcent(na_mort_employed$rate, na_mort_employed$ses_value, col="blue", lty = 3, add = T)
+curveConcent(na_mort_eng$rate, na_mort_eng$ses_value, col="darkgreen", lty = 4, add = T)
+curveConcent(na_mort_income$rate, na_mort_income$ses_value, col="orange", lty = 5, add = T)
+# legend(x = 0.48, y = 0.38, cex = 0.6,
+#        title = "Indicator of ZCTA-level social advantage",
+#        col = c("red", "black", "blue", "darkgreen", "orange"),
+#        lty = c(1, 2, 3, 4, 5),
+#        legend = c("Non-Hispanic white population",
+#                   "High school graduates",
+#                   "Employment",
+#                   "Proficiency in English",
+#                   "Median income (2014$)"))
+text(x = 0.05, y = 0.9, labels = c("B: Non-accidental mortality"), pos = 4)
+dev.off()
+
+#' respiratory hosp plots
+res_nhw <- filter(springs_impacts, ses_indic == "pct_nhw") %>% 
+  filter(outcome == "hosp_res")
+res_hs_grad <- filter(springs_impacts, ses_indic == "pct_hs_grad") %>% 
+  filter(outcome == "hosp_res")
+res_employed <- filter(springs_impacts, ses_indic == "pct_employed") %>% 
+  filter(outcome == "hosp_res")
+res_eng <- filter(springs_impacts, ses_indic == "pct_hh_not_limited_eng") %>% 
+  filter(outcome == "hosp_res")
+res_income <- filter(springs_impacts, ses_indic == "med_income") %>% 
+  filter(outcome == "hosp_res")
+
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Springs_Res_Conc_Curves.jpeg",
+     width = 5, height = 5, units = "in", res = 500)
+curveConcent(res_nhw$rate, res_nhw$ses_value, col="red", lty = 1,
+             xlab = paste("Social advantage rank"),
+             ylab = paste("Cumulative benefits"))
+curveConcent(res_hs_grad$rate, res_hs_grad$ses_value, col="black", lty = 2, add = T)
+curveConcent(res_employed$rate, res_employed$ses_value, col="blue", lty = 3, add = T)
+curveConcent(res_eng$rate, res_eng$ses_value, col="darkgreen", lty = 4, add = T)
+curveConcent(res_income$rate, res_income$ses_value, col="orange", lty = 5, add = T)
+legend(x = 0.48, y = 0.38, cex = 0.6,
+       title = "Indicator of ZCTA-level social advantage",
+       col = c("red", "black", "blue", "darkgreen", "orange"),
+       lty = c(1, 2, 3, 4, 5),
+       legend = c("Non-Hispanic white population",
+                  "High school graduates",
+                  "Employment",
+                  "Proficiency in English",
+                  "Median income (2014$)"))
+text(x = 0.05, y = 0.9, labels = c("A: Respiratory hospitalizations"), pos = 4)
+dev.off()
+
+#' cvd hosp plots
+cvd_nhw <- filter(springs_impacts, ses_indic == "pct_nhw") %>% 
+  filter(outcome == "hosp_cvd")
+cvd_hs_grad <- filter(springs_impacts, ses_indic == "pct_hs_grad") %>% 
+  filter(outcome == "hosp_cvd")
+cvd_employed <- filter(springs_impacts, ses_indic == "pct_employed") %>% 
+  filter(outcome == "hosp_cvd")
+cvd_eng <- filter(springs_impacts, ses_indic == "pct_hh_not_limited_eng") %>% 
+  filter(outcome == "hosp_cvd")
+cvd_income <- filter(springs_impacts, ses_indic == "med_income") %>% 
+  filter(outcome == "hosp_cvd")
+
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Springs_CVD_Conc_Curves.jpeg",
+     width = 5, height = 5, units = "in", res = 500)
+curveConcent(cvd_nhw$rate, cvd_nhw$ses_value, col="red", lty = 1,
+             xlab = paste("Social advantage rank"),
+             ylab = paste("Cumulative benefits"))
+curveConcent(cvd_hs_grad$rate, cvd_hs_grad$ses_value, col="black", lty = 2, add = T)
+curveConcent(cvd_employed$rate, cvd_employed$ses_value, col="blue", lty = 3, add = T)
+curveConcent(cvd_eng$rate, cvd_eng$ses_value, col="darkgreen", lty = 4, add = T)
+curveConcent(cvd_income$rate, cvd_income$ses_value, col="orange", lty = 5, add = T)
+# legend(x = 0.48, y = 0.38, cex = 0.6,
+#        title = "Indicator of ZCTA-level social advantage",
+#        col = c("red", "black", "blue", "darkgreen", "orange"),
+#        lty = c(1, 2, 3, 4, 5),
+#        legend = c("Non-Hispanic white population",
+#                   "High school graduates",
+#                   "Employment",
+#                   "Proficiency in English",
+#                   "Median income (2014$)"))
 text(x = 0.05, y = 0.9, labels = c("B: Cardiovascular hospitalizations"), pos = 4)
 dev.off()
+
+#' PUEBLO ZCTAS
+#' All-cause mortality plots
+mort_nhw <- filter(pueblo_impacts, ses_indic == "pct_nhw") %>% 
+  filter(outcome == "mort_ac")
+mort_hs_grad <- filter(pueblo_impacts, ses_indic == "pct_hs_grad") %>% 
+  filter(outcome == "mort_ac")
+mort_employed <- filter(pueblo_impacts, ses_indic == "pct_employed") %>% 
+  filter(outcome == "mort_ac")
+mort_eng <- filter(pueblo_impacts, ses_indic == "pct_hh_not_limited_eng") %>% 
+  filter(outcome == "mort_ac")
+mort_income <- filter(pueblo_impacts, ses_indic == "med_income") %>% 
+  filter(outcome == "mort_ac")
+
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Pueblo_AC_Mort_Conc_Curves.jpeg",
+     width = 5, height = 5, units = "in", res = 500)
+curveConcent(mort_nhw$rate, mort_nhw$ses_value, col="red", lty = 1,
+             xlab = paste("Social advantage rank"),
+             ylab = paste("Cumulative benefits"))
+curveConcent(mort_hs_grad$rate, mort_hs_grad$ses_value, col="black", lty = 2, add = T)
+curveConcent(mort_employed$rate, mort_employed$ses_value, col="blue", lty = 3, add = T)
+curveConcent(mort_eng$rate, mort_eng$ses_value, col="darkgreen", lty = 4, add = T)
+curveConcent(mort_income$rate, mort_income$ses_value, col="orange", lty = 5, add = T)
+legend(x = 0.48, y = 0.38, cex = 0.6,
+       title = "Indicator of ZCTA-level social advantage",
+       col = c("red", "black", "blue", "darkgreen", "orange"),
+       lty = c(1, 2, 3, 4, 5),
+       legend = c("Non-Hispanic white population",
+                  "High school graduates",
+                  "Employment",
+                  "Proficiency in English",
+                  "Median income (2014$)"))
+text(x = 0.05, y = 0.9, labels = c("A: All-cause mortality"), pos = 4)
+dev.off()
+
+#' non-accidental mortality plots
+na_mort_nhw <- filter(pueblo_impacts, ses_indic == "pct_nhw") %>% 
+  filter(outcome == "st_mort_na")
+na_mort_hs_grad <- filter(pueblo_impacts, ses_indic == "pct_hs_grad") %>% 
+  filter(outcome == "st_mort_na")
+na_mort_employed <- filter(pueblo_impacts, ses_indic == "pct_employed") %>% 
+  filter(outcome == "st_mort_na")
+na_mort_eng <- filter(pueblo_impacts, ses_indic == "pct_hh_not_limited_eng") %>% 
+  filter(outcome == "st_mort_na")
+na_mort_income <- filter(pueblo_impacts, ses_indic == "med_income") %>% 
+  filter(outcome == "st_mort_na")
+
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Pueblo_NA_Mort_Conc_Curves.jpeg",
+     width = 5, height = 5, units = "in", res = 500)
+curveConcent(na_mort_nhw$rate, na_mort_nhw$ses_value, col="red", lty = 1,
+             xlab = paste("Social advantage rank"),
+             ylab = paste("Cumulative benefits"))
+curveConcent(na_mort_hs_grad$rate, na_mort_hs_grad$ses_value, col="black", lty = 2, add = T)
+curveConcent(na_mort_employed$rate, na_mort_employed$ses_value, col="blue", lty = 3, add = T)
+curveConcent(na_mort_eng$rate, na_mort_eng$ses_value, col="darkgreen", lty = 4, add = T)
+curveConcent(na_mort_income$rate, na_mort_income$ses_value, col="orange", lty = 5, add = T)
+# legend(x = 0.48, y = 0.38, cex = 0.6,
+#        title = "Indicator of ZCTA-level social advantage",
+#        col = c("red", "black", "blue", "darkgreen", "orange"),
+#        lty = c(1, 2, 3, 4, 5),
+#        legend = c("Non-Hispanic white population",
+#                   "High school graduates",
+#                   "Employment",
+#                   "Proficiency in English",
+#                   "Median income (2014$)"))
+text(x = 0.05, y = 0.9, labels = c("B: Non-accidental mortality"), pos = 4)
+dev.off()
+
+#' respiratory hosp plots
+res_nhw <- filter(pueblo_impacts, ses_indic == "pct_nhw") %>% 
+  filter(outcome == "hosp_res")
+res_hs_grad <- filter(pueblo_impacts, ses_indic == "pct_hs_grad") %>% 
+  filter(outcome == "hosp_res")
+res_employed <- filter(pueblo_impacts, ses_indic == "pct_employed") %>% 
+  filter(outcome == "hosp_res")
+res_eng <- filter(pueblo_impacts, ses_indic == "pct_hh_not_limited_eng") %>% 
+  filter(outcome == "hosp_res")
+res_income <- filter(pueblo_impacts, ses_indic == "med_income") %>% 
+  filter(outcome == "hosp_res")
+
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Pueblo_Res_Conc_Curves.jpeg",
+     width = 5, height = 5, units = "in", res = 500)
+curveConcent(res_nhw$rate, res_nhw$ses_value, col="red", lty = 1,
+             xlab = paste("Social advantage rank"),
+             ylab = paste("Cumulative benefits"))
+curveConcent(res_hs_grad$rate, res_hs_grad$ses_value, col="black", lty = 2, add = T)
+curveConcent(res_employed$rate, res_employed$ses_value, col="blue", lty = 3, add = T)
+curveConcent(res_eng$rate, res_eng$ses_value, col="darkgreen", lty = 4, add = T)
+curveConcent(res_income$rate, res_income$ses_value, col="orange", lty = 5, add = T)
+legend(x = 0.48, y = 0.38, cex = 0.6,
+       title = "Indicator of ZCTA-level social advantage",
+       col = c("red", "black", "blue", "darkgreen", "orange"),
+       lty = c(1, 2, 3, 4, 5),
+       legend = c("Non-Hispanic white population",
+                  "High school graduates",
+                  "Employment",
+                  "Proficiency in English",
+                  "Median income (2014$)"))
+text(x = 0.05, y = 0.9, labels = c("A: Respiratory hospitalizations"), pos = 4)
+dev.off()
+
+#' cvd hosp plots
+cvd_nhw <- filter(pueblo_impacts, ses_indic == "pct_nhw") %>% 
+  filter(outcome == "hosp_cvd")
+cvd_hs_grad <- filter(pueblo_impacts, ses_indic == "pct_hs_grad") %>% 
+  filter(outcome == "hosp_cvd")
+cvd_employed <- filter(pueblo_impacts, ses_indic == "pct_employed") %>% 
+  filter(outcome == "hosp_cvd")
+cvd_eng <- filter(pueblo_impacts, ses_indic == "pct_hh_not_limited_eng") %>% 
+  filter(outcome == "hosp_cvd")
+cvd_income <- filter(pueblo_impacts, ses_indic == "med_income") %>% 
+  filter(outcome == "hosp_cvd")
+
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Springs_CVD_Conc_Curves.jpeg",
+     width = 5, height = 5, units = "in", res = 500)
+curveConcent(cvd_nhw$rate, cvd_nhw$ses_value, col="red", lty = 1,
+             xlab = paste("Social advantage rank"),
+             ylab = paste("Cumulative benefits"))
+curveConcent(cvd_hs_grad$rate, cvd_hs_grad$ses_value, col="black", lty = 2, add = T)
+curveConcent(cvd_employed$rate, cvd_employed$ses_value, col="blue", lty = 3, add = T)
+curveConcent(cvd_eng$rate, cvd_eng$ses_value, col="darkgreen", lty = 4, add = T)
+curveConcent(cvd_income$rate, cvd_income$ses_value, col="orange", lty = 5, add = T)
+# legend(x = 0.48, y = 0.38, cex = 0.6,
+#        title = "Indicator of ZCTA-level social advantage",
+#        col = c("red", "black", "blue", "darkgreen", "orange"),
+#        lty = c(1, 2, 3, 4, 5),
+#        legend = c("Non-Hispanic white population",
+#                   "High school graduates",
+#                   "Employment",
+#                   "Proficiency in English",
+#                   "Median income (2014$)"))
+text(x = 0.05, y = 0.9, labels = c("B: Cardiovascular hospitalizations"), pos = 4)
+dev.off()
+

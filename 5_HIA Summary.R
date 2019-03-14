@@ -19,6 +19,16 @@
 #' The final results are saved as an Excel spreadsheet
 #' =============================================================================
 
+pueblo_zips <- c("81001", "81003", "81004", "81005", "81006",
+                 "81007", "81008", "81022", "81025")
+
+springs_zips <- c("80938", "80939", "80951", "80918", "80919", "80920",
+                  "80921", "80922", "80923", "80924", "80925", "80926",
+                  "80927", "80929", "80903", "80904", "80905", "80906", 
+                  "80907", "80908", "80909", "80910", "80911", "80914",
+                  "80915", "80916", "80917", "80809", "80829", "80831",
+                  "80840", "80913", "80817", "80925", "80929")
+
 #' For the report!!
 #' What is the area of the receptor grid?
 load(paste("./HIA Inputs/", pre[s], "cmaq_spatial.RData", sep=""))
@@ -110,6 +120,7 @@ for (i in 1:length(pol_names)) {
     exp_df <- zcta_list[[j]]
     
     temp <- data.frame(pol = pol_names[i],
+                       zctas = "all",
                        season = pre[s],
                        metric = metrics[j],
                        mean = mean(exp_df$wt_conc, na.rm=T),
@@ -119,6 +130,37 @@ for (i in 1:length(pol_names)) {
                        max = max(exp_df$wt_conc, na.rm=T))
     exp_summary <- bind_rows(exp_summary, temp)
     rm(temp)
+    
+    exp_df2 <- zcta_list[[j]] %>% 
+      filter(GEOID10 %in% springs_zips)
+    
+    temp <- data.frame(pol = pol_names[i],
+                       zctas = "springs",
+                       season = pre[s],
+                       metric = metrics[j],
+                       mean = mean(exp_df2$wt_conc, na.rm=T),
+                       sd = sd(exp_df2$wt_conc, na.rm=T),
+                       min = min(exp_df2$wt_conc, na.rm=T),
+                       median = median(exp_df2$wt_conc, na.rm=T),
+                       max = max(exp_df2$wt_conc, na.rm=T))
+    exp_summary <- bind_rows(exp_summary, temp)
+    rm(temp)
+    
+    exp_df3 <- zcta_list[[j]] %>% 
+      filter(GEOID10 %in% pueblo_zips)
+    
+    temp <- data.frame(pol = pol_names[i],
+                       zctas = "pueblo",
+                       season = pre[s],
+                       metric = metrics[j],
+                       mean = mean(exp_df3$wt_conc, na.rm=T),
+                       sd = sd(exp_df3$wt_conc, na.rm=T),
+                       min = min(exp_df3$wt_conc, na.rm=T),
+                       median = median(exp_df3$wt_conc, na.rm=T),
+                       max = max(exp_df3$wt_conc, na.rm=T))
+    exp_summary <- bind_rows(exp_summary, temp)
+    rm(temp)
+    
   }
   
   load(paste("./HIA Inputs/", pre[s+1], 
@@ -130,6 +172,7 @@ for (i in 1:length(pol_names)) {
     exp_df <- zcta_list[[j]]
     
     temp <- data.frame(pol = pol_names[i],
+                       zctas = "all",
                        season = pre[s+1],
                        metric = metrics[j],
                        mean = mean(exp_df$wt_conc, na.rm=T),
@@ -137,6 +180,36 @@ for (i in 1:length(pol_names)) {
                        min = min(exp_df$wt_conc, na.rm=T),
                        median = median(exp_df$wt_conc, na.rm=T),
                        max = max(exp_df$wt_conc, na.rm=T))
+    exp_summary <- bind_rows(exp_summary, temp)
+    rm(temp)
+    
+    exp_df2 <- zcta_list[[j]] %>% 
+      filter(GEOID10 %in% springs_zips)
+    
+    temp <- data.frame(pol = pol_names[i],
+                       zctas = "springs",
+                       season = pre[s+1],
+                       metric = metrics[j],
+                       mean = mean(exp_df2$wt_conc, na.rm=T),
+                       sd = sd(exp_df2$wt_conc, na.rm=T),
+                       min = min(exp_df2$wt_conc, na.rm=T),
+                       median = median(exp_df2$wt_conc, na.rm=T),
+                       max = max(exp_df2$wt_conc, na.rm=T))
+    exp_summary <- bind_rows(exp_summary, temp)
+    rm(temp)
+    
+    exp_df3 <- zcta_list[[j]] %>% 
+      filter(GEOID10 %in% pueblo_zips)
+    
+    temp <- data.frame(pol = pol_names[i],
+                       zctas = "pueblo",
+                       season = pre[s+1],
+                       metric = metrics[j],
+                       mean = mean(exp_df3$wt_conc, na.rm=T),
+                       sd = sd(exp_df3$wt_conc, na.rm=T),
+                       min = min(exp_df3$wt_conc, na.rm=T),
+                       median = median(exp_df3$wt_conc, na.rm=T),
+                       max = max(exp_df3$wt_conc, na.rm=T))
     exp_summary <- bind_rows(exp_summary, temp)
     rm(temp)
   }
@@ -234,6 +307,7 @@ out_df_2 <- out_df
 rm(out_df)
   
 combined_df <- bind_rows(out_df_1, out_df_2) %>%
+  mutate(zcta = as.character(zcta)) %>% 
   group_by(zcta, pol, outcome) %>%
   summarise(median = sum(median, na.rm=T),
             p2.5 = sum(p2.5, na.rm=T),
@@ -249,6 +323,7 @@ combined_df <- bind_rows(out_df_1, out_df_2) %>%
 total_df <- combined_df %>%
   group_by(pol, outcome) %>%
   summarise(median = round(sum(median, na.rm=T),2),
+            zctas = "all",
             p2.5 = round(sum(p2.5, na.rm=T),2),
             p97.5 = round(sum(p97.5, na.rm=T),2),
             median_scaled = round(sum(median_scaled, na.rm=T),0),
@@ -257,7 +332,37 @@ total_df <- combined_df %>%
             median_value = round(sum(median_value, na.rm=T),0),
             p2.5_value = round(sum(p2.5_value, na.rm=T),0),
             p97.5_value = round(sum(p97.5_value, na.rm=T),0))
-  
+
+total_df2 <- combined_df %>%
+  filter(zcta %in% springs_zips) %>% 
+  group_by(pol, outcome) %>%
+  summarise(median = round(sum(median, na.rm=T),2),
+            zctas = "springs",
+            p2.5 = round(sum(p2.5, na.rm=T),2),
+            p97.5 = round(sum(p97.5, na.rm=T),2),
+            median_scaled = round(sum(median_scaled, na.rm=T),0),
+            p2.5_scaled = round(sum(p2.5_scaled, na.rm=T),0),
+            p97.5_scaled = round(sum(p97.5_scaled, na.rm=T),0),
+            median_value = round(sum(median_value, na.rm=T),0),
+            p2.5_value = round(sum(p2.5_value, na.rm=T),0),
+            p97.5_value = round(sum(p97.5_value, na.rm=T),0))
+
+total_df3 <- combined_df %>%
+  filter(zcta %in% pueblo_zips) %>% 
+  group_by(pol, outcome) %>%
+  summarise(median = round(sum(median, na.rm=T),2),
+            zctas = "pueblo",
+            p2.5 = round(sum(p2.5, na.rm=T),2),
+            p97.5 = round(sum(p97.5, na.rm=T),2),
+            median_scaled = round(sum(median_scaled, na.rm=T),0),
+            p2.5_scaled = round(sum(p2.5_scaled, na.rm=T),0),
+            p97.5_scaled = round(sum(p97.5_scaled, na.rm=T),0),
+            median_value = round(sum(median_value, na.rm=T),0),
+            p2.5_value = round(sum(p2.5_value, na.rm=T),0),
+            p97.5_value = round(sum(p97.5_value, na.rm=T),0))
+
+total_df <- bind_rows(total_df, total_df2, total_df3)
+
 save(out_df_1, out_df_2, combined_df, total_df,
      file = paste("./HIA Outputs/", pre[s], pre[s+1], "zcta_combined.RData",
                   sep=""))
