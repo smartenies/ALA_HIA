@@ -21,6 +21,7 @@ library(ggplot2)
 library(ggrepel)
 library(ggmap)
 library(ggsn)
+library(ggpubr)
 library(ggthemes)
 library(tidyverse)
 library(readxl)
@@ -745,8 +746,8 @@ ses_file <- "./HIA Inputs/ses indicators.txt"
 ses <- read.table(ses_file, header=T, stringsAsFactors = F) %>%
   mutate(GEOID = gsub("86000US", "", GEOID)) %>%
   dplyr::rename(zcta = GEOID) %>%
-  dplyr::select(zcta, total_pop, pct_poc, pct_nhw, med_income,
-                pct_less_hs, pct_unemployed, pct_hh_limited_eng)
+  dplyr::select(zcta, total_pop, pct_nhw, med_income,
+                pct_hs_grad, pct_employed, pct_hh_not_limited_eng)
 
 load("./HIA Outputs/HIA_Winter_HIA_Summer_zcta_combined.RData")
 impacts <- select(combined_df, zcta, pol, outcome, median_scaled) %>% 
@@ -862,11 +863,10 @@ pueblo_income <- ggplot(data = pueblo_impacts) +
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
            height = 0.02, anchor = c(x = -104.8, y = 37.8), st.dist = 0.025)
 
-pueblo_low_ed <- ggplot(data = pueblo_impacts) +
-  geom_sf(data = pueblo_impacts, aes(fill = pct_less_hs), color = NA) +
-  # geom_sf(data = pueblo, fill=NA, color="red") +
-  geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
-          show.legend = "point") +
+pueblo_high_ed <- ggplot(data = pueblo_impacts) +
+  geom_sf(data = pueblo_impacts, aes(fill = pct_hs_grad), color = NA) +
+  # geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
+  #         show.legend = "point") +
   geom_label_repel(data = filter(pp_sf, id == "Comanche"), 
                    aes(label = id, geometry = geometry),
                    stat = "sf_coordinates", direction = "x", 
@@ -891,8 +891,8 @@ pueblo_low_ed <- ggplot(data = pueblo_impacts) +
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
            height = 0.02, anchor = c(x = -104.8, y = 37.8), st.dist = 0.025)
 
-pueblo_unemp <- ggplot(data = pueblo_impacts) +
-  geom_sf(data = pueblo_impacts, aes(fill = pct_unemployed), color = NA) +
+pueblo_emp <- ggplot(data = pueblo_impacts) +
+  geom_sf(data = pueblo_impacts, aes(fill = pct_employed), color = NA) +
   # geom_sf(data = pueblo, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
@@ -918,8 +918,8 @@ pueblo_unemp <- ggplot(data = pueblo_impacts) +
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
            height = 0.02, anchor = c(x = -104.8, y = 37.8), st.dist = 0.025)
 
-pueblo_limited_eng <- ggplot(data = pueblo_impacts) +
-  geom_sf(data = pueblo_impacts, aes(fill = pct_hh_limited_eng), color = NA) +
+pueblo_not_limited_eng <- ggplot(data = pueblo_impacts) +
+  geom_sf(data = pueblo_impacts, aes(fill = pct_hh_not_limited_eng), color = NA) +
   # geom_sf(data = pueblo, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
@@ -1112,7 +1112,6 @@ springs_poc <- ggplot(data = springs_impacts) +
            y.min =  38.5, y.max = 39.2,
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
            height = 0.02, anchor = c(x = -104.3, y = 38.5), st.dist = 0.025)
-springs_poc
 
 springs_income <- ggplot(data = springs_impacts) +
   geom_sf(data = springs_impacts, aes(fill = med_income/10000), color = NA) +
@@ -1141,8 +1140,8 @@ springs_income <- ggplot(data = springs_impacts) +
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
            height = 0.02, anchor = c(x = -104.3, y = 38.5), st.dist = 0.025)
 
-springs_low_ed <- ggplot(data = springs_impacts) +
-  geom_sf(data = springs_impacts, aes(fill = pct_less_hs), color = NA) +
+springs_high_ed <- ggplot(data = springs_impacts) +
+  geom_sf(data = springs_impacts, aes(fill = pct_hs_grad), color = NA) +
   # geom_sf(data = springs, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
@@ -1168,8 +1167,8 @@ springs_low_ed <- ggplot(data = springs_impacts) +
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
            height = 0.02, anchor = c(x = -104.3, y = 38.5), st.dist = 0.025)
 
-springs_unemp <- ggplot(data = springs_impacts) +
-  geom_sf(data = springs_impacts, aes(fill = pct_unemployed), color = NA) +
+springs_emp <- ggplot(data = springs_impacts) +
+  geom_sf(data = springs_impacts, aes(fill = pct_employed), color = NA) +
   # geom_sf(data = springs, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
@@ -1195,8 +1194,8 @@ springs_unemp <- ggplot(data = springs_impacts) +
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
            height = 0.02, anchor = c(x = -104.3, y = 38.5), st.dist = 0.025)
 
-springs_limited_eng <- ggplot(data = springs_impacts) +
-  geom_sf(data = springs_impacts, aes(fill = pct_hh_limited_eng), color = NA) +
+springs_not_limited_eng <- ggplot(data = springs_impacts) +
+  geom_sf(data = springs_impacts, aes(fill = pct_hh_not_limited_eng), color = NA) +
   # geom_sf(data = springs, fill=NA, color="red") +
   geom_sf(data = pp_sf, color = "red", size = 2, inherit.aes = F, 
           show.legend = "point") +
@@ -1221,6 +1220,13 @@ springs_limited_eng <- ggplot(data = springs_impacts) +
            y.min =  38.5, y.max = 39.2,
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
            height = 0.02, anchor = c(x = -104.3, y = 38.5), st.dist = 0.025)
+
+#' Label for the ZCTA
+high_zcta <- data.frame(name = "80904",
+                        x = -104.868125,
+                        y = 38.865384) %>% 
+  st_as_sf(coords = c("x", "y"), crs = ll_wgs84)
+plot(st_geometry(high_zcta))
 
 springs_ac_mort_sf <- filter(springs_impacts, outcome == "mort_ac")
 springs_ac_mort <- ggplot() +
@@ -1233,6 +1239,12 @@ springs_ac_mort <- ggplot() +
                    stat = "sf_coordinates", direction = "x", 
                    nudge_x = -0.2, nudge_y = -0.1,
                    colour = "red", segment.colour = "red", segment.size = 0.3,
+                   inherit.aes = F, show.legend = F) +
+  geom_label_repel(data = high_zcta, 
+                   aes(label = name, geometry = geometry),
+                   stat = "sf_coordinates", direction = "x", 
+                   nudge_y = 0.1, colour = "red", segment.colour = "red", 
+                   segment.size = 0.3,
                    inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided deaths\nper 10,000") +
   map_theme2 +
@@ -1249,6 +1261,7 @@ springs_ac_mort <- ggplot() +
            y.min =  38.5, y.max = 39.2,
            dist = 10, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
            height = 0.02, anchor = c(x = -104.3, y = 38.5), st.dist = 0.025)
+springs_ac_mort
 
 springs_na_mort_sf <- filter(springs_impacts, outcome == "st_mort_na")
 springs_na_mort <- ggplot() +
@@ -1350,14 +1363,14 @@ ggsave(ses_plots,
        device = "jpeg", dpi=500, units = "in", height = 8, width = 8)
 
 sup_ses_plots <- ggarrange(
-  annotate_figure(ggarrange(springs_low_ed, springs_limited_eng, springs_unemp, 
-                            labels = c("A: Low education", "B: Limited English",
-                                       "C: Unemployment"), 
+  annotate_figure(ggarrange(springs_high_ed, springs_not_limited_eng, springs_emp, 
+                            labels = c("A: High School graduates", "B: Proficient English",
+                                       "C: Employment"), 
                             ncol = 3, nrow = 1),
                   left = text_grob("Colorado Springs", rot = 90, face = "bold")),
-  annotate_figure(ggarrange(pueblo_low_ed, pueblo_limited_eng, pueblo_unemp, 
-                            labels = c("D: Low education", "E: Limited English",
-                                       "F: Unemployment"), 
+  annotate_figure(ggarrange(pueblo_high_ed, pueblo_not_limited_eng, pueblo_emp, 
+                            labels = c("D: High School graduates", "E: Proficient English",
+                                       "F: Employment"),
                             ncol = 3, nrow = 1),
                   left = text_grob("Pueblo", rot = 90, face = "bold")),
   ncol = 1, nrow = 2)
@@ -1441,6 +1454,12 @@ impacts2 <- ungroup(combined_df) %>%
   gather(ses_indic, ses_value, pct_under5:med_income) %>%
   mutate(rate = (median_scaled / total_pop) * rate_pop) %>% 
   mutate(rate = ifelse(rate < 0, NA, rate))
+
+#' Which ZCTA has the highest all-cause rate?
+#' 80904
+ac_mort_rates <- filter(impacts2, outcome == "mort_ac") %>% 
+  arrange(desc(rate))
+head(ac_mort_rates)
 
 #' Springs ZCTAs and Pueblo ZCTAs
 springs_zips <- c("80938", "80939", "80951", "80918", "80919", "80920",
@@ -1861,4 +1880,34 @@ curveConcent(cvd_income$rate, cvd_income$ses_value, col="orange", lty = 5, add =
 #                   "Median income (2014$)"))
 text(x = 0.05, y = 0.9, labels = c("B: Cardiovascular hospitalizations"), pos = 4)
 dev.off()
+
+#' -----------------------------------------------------------------------------
+#' SES variables for the entire study area and the most impacted
+#' -----------------------------------------------------------------------------
+
+ses_file <- "./HIA Inputs/ses indicators.txt"
+ses <- read.table(ses_file, header=T, stringsAsFactors = F) %>%
+  mutate(GEOID = gsub("86000US", "", GEOID)) %>%
+  dplyr::rename(zcta = GEOID) %>%
+  dplyr::select(zcta, total_pop, pct_nhw, med_income,
+                pct_hs_grad, pct_employed, pct_hh_not_limited_eng)
+
+#' All zcta
+load("./HIA Inputs/HIA_Winter_zcta.RData")
+zcta_sf <- st_as_sf(zcta) %>% 
+  st_zm(drop = T)
+head(zcta_sf)
+all_zcta <- unique(zcta_sf$GEOID10)
+
+all_zcta_ses <- filter(ses, zcta %in% all_zcta) %>% 
+  summarize(total_pop = sum(total_pop),
+            mean_nhw = mean(pct_nhw, na.rm=T),
+            mean_income = mean(med_income, na.rm=T),
+            mean_ed = mean(pct_hs_grad, na.rm=T),
+            mean_emp = mean(pct_employed, na.rm=T),
+            mean_eng = mean(pct_hh_not_limited_eng, na.rm=T))
+all_zcta_ses
+
+zcta_ses <- filter(ses, zcta == "80904")
+zcta_ses
 
