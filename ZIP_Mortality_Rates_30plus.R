@@ -61,6 +61,9 @@ co_mortality_zip <- co_mortality %>%
          # non_accidental_1000_30plus5y = (non_accidental_n/p30plus5yr)*1000,
          # non_accidental_1000_30plus5y_se = (non_accidental_n/sqrt(p30plus5yr))*1000)
 
+test <- co_mortality_zip[1,]
+test$rate <- (test$all_cause_n / test$p30plus5yr) * 1000
+
 #' use Poisson regression to calculate rates and standard errors
 for (i in 1:nrow(co_mortality_zip)) {
   df <- co_mortality_zip[i,]

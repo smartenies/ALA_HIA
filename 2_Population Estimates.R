@@ -25,6 +25,7 @@ rm(co_zcta)
 #' Creating the population database
 #' 
 #' See ACS Instructions for Applying Statistical Testing:
+#' https://www2.census.gov/programs-surveys/acs/tech_docs/statistical_testing/2016StatisticalTesting5year.pdf
 #' SE for each population age group is derived from the MOE
 #'      SE = MOE / Z where Z is 1.645 (ACS uses a 90% confidence level)
 #' When combining estimates, MOE is SQRT(MOE1^2 + MOE2^2 + ...)

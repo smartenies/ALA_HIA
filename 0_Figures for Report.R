@@ -129,6 +129,10 @@ zcta_sf <- st_as_sf(zcta) %>%
   st_zm(drop = T)
 head(zcta_sf)
 
+#' Distribution of ZCTA areas
+zcta_sf$area_km2 <-as.vector(unclass(st_area(zcta_sf)) / (1000^2)) 
+summary(zcta_sf$area_km2)
+
 zcta_union <- st_union(zcta_sf)
 head(zcta_union)
 plot(st_geometry(zcta_union))
@@ -442,6 +446,230 @@ ggsave(hs1_maps_winter,
        filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/HS1_Winter_Change_in_Exposure.jpeg", 
        device = "jpeg", dpi=500, units = "in", height = 5, width = 7)
 
+
+# Second, map change in exposure for HS2 ----
+#' Winter and summer ozone and pm ("annual" averages)
+pol_names <- c("pm", "o3")
+pol_map <- c("PM\u2082.\u2085", "O\u2083")
+unit_map <- c("(\u03BCg/m\u00B3)", "(ppb)")
+season_map <- c("winter", "summer")
+
+load("./Data/Spatial Data/power_plants.RData")
+pp <- st_transform(pp, crs = ll_wgs84)
+
+load("./Data/Spatial Data/co_zcta.RData")
+
+#' PM2.5, Winter
+s <- 9
+i <- 1
+
+load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
+zcta_ids <- unique(zcta$GEOID10)
+zcta_within_ids <- unique(zcta_within$GEOID10)
+rm(zcta, zcta_within)
+
+#' Read in change in "annual" concentration
+load(paste("./HIA Inputs/", pre[s], pol_names[i], "_zcta_metrics.RData", sep=""))
+mean_df <- zcta_list[["ann_mean"]]
+
+#' Plot changes in exposure
+pm_winter_zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
+  select(GEOID10) %>%
+  st_transform(crs = ll_wgs84) %>% 
+  left_join(mean_df, by="GEOID10") %>% 
+  filter(!is.na(wt_conc))
+plot(st_geometry(pm_winter_zcta))
+plot(pm_winter_zcta["wt_conc"])
+
+# pm_winter <- ggmap(base_map, darken = c(0.75, "white")) +
+pm_winter <- ggplot() +
+  geom_sf(data = pm_winter_zcta, aes(fill = wt_conc), inherit.aes = F,
+          color = NA) +
+  # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
+  #         show.legend = "point") +
+  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+                  colour = "red", segment.colour = "red", segment.size = 0.3,
+                  inherit.aes = F, show.legend = F) +
+  scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
+  map_theme +
+  theme(legend.position = c(0.8, 0.8),
+        plot.margin=grid::unit(c(0,0,0,0), "mm")) +
+  xlab("") + ylab("") +
+  coord_sf(ylim = c(36.8, 40.5), 
+           xlim = c(-106.5, -102)) +
+  north(x.min = -106.5, x.max = -102,
+        y.min =  36.8, y.max = 40.5,
+        symbol = 12, location = "bottomright", scale = 0.075,
+        anchor = c(x = -102.75, y = 37.25)) +
+  scalebar(x.min = -106.5, x.max = -102,
+           y.min =  36.8, y.max = 40.5,
+           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+pm_winter
+
+#' PM2.5, Summer
+s <- 10
+i <- 1
+
+load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
+zcta_ids <- unique(zcta$GEOID10)
+zcta_within_ids <- unique(zcta_within$GEOID10)
+rm(zcta, zcta_within)
+
+#' Read in change in "annual" concentration
+load(paste("./HIA Inputs/", pre[s], pol_names[i], "_zcta_metrics.RData", sep=""))
+mean_df <- zcta_list[["ann_mean"]]
+
+#' Plot changes in exposure
+pm_summer_zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
+  select(GEOID10) %>%
+  st_transform(crs = ll_wgs84) %>% 
+  left_join(mean_df, by="GEOID10") %>% 
+  filter(!is.na(wt_conc))
+plot(st_geometry(pm_summer_zcta))
+plot(pm_summer_zcta["wt_conc"])
+
+pm_summer <- ggplot() +
+  geom_sf(data = pm_summer_zcta, aes(fill = wt_conc), inherit.aes = F,
+          color = NA) +
+  # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
+  #         show.legend = "point") +
+  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+                  colour = "red", segment.colour = "red", segment.size = 0.3,
+                  inherit.aes = F, show.legend = F) +
+  scale_fill_viridis(name = paste(pol_map[i], unit_map[i]), 
+                     breaks = c(min(pm_summer_zcta$wt_conc), 0.1, 0.2, 0.3, 0.4),
+                     labels = c(round(min(pm_summer_zcta$wt_conc),1), 
+                                "0.1", "0.2", "0.3", "0.4")) + 
+  map_theme +
+  theme(legend.position = c(0.8, 0.8),
+        plot.margin=grid::unit(c(0,0,0,0), "mm")) +
+  xlab("") + ylab("") +
+  coord_sf(ylim = c(36.8, 40.5), 
+           xlim = c(-106.5, -102)) +
+  north(x.min = -106.5, x.max = -102,
+        y.min =  36.8, y.max = 40.5,
+        symbol = 12, location = "bottomright", scale = 0.075,
+        anchor = c(x = -102.75, y = 37.25)) +
+  scalebar(x.min = -106.5, x.max = -102,
+           y.min =  36.8, y.max = 40.5,
+           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+pm_summer
+
+#' ozone, Winter
+s <- 9
+i <- 2
+
+load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
+zcta_ids <- unique(zcta$GEOID10)
+zcta_within_ids <- unique(zcta_within$GEOID10)
+rm(zcta, zcta_within)
+
+#' Read in change in "annual" concentration
+load(paste("./HIA Inputs/", pre[s], pol_names[i], "_zcta_metrics.RData", sep=""))
+mean_df <- zcta_list[["ann_mean"]]
+
+#' Plot changes in exposure
+o3_winter_zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
+  select(GEOID10) %>%
+  st_transform(crs = ll_wgs84) %>% 
+  left_join(mean_df, by="GEOID10") %>% 
+  filter(!is.na(wt_conc))
+plot(st_geometry(o3_winter_zcta))
+plot(o3_winter_zcta["wt_conc"])
+
+o3_winter <- ggplot() +
+  geom_sf(data = o3_winter_zcta, aes(fill = wt_conc), inherit.aes = F,
+          color = NA) +
+  # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
+  #         show.legend = "point") +
+  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+                  colour = "red", segment.colour = "red", segment.size = 0.3,
+                  inherit.aes = F, show.legend = F) +
+  scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
+                     breaks = c(max(o3_winter_zcta$wt_conc), -0.1, -0.2, -0.3, -0.4),
+                     labels = c(round(max(o3_winter_zcta$wt_conc),1), 
+                                "-0.1", "-0.2", "-0.3", "-0.4")) + 
+  map_theme +
+  theme(legend.position = c(0.8, 0.8),
+        plot.margin=grid::unit(c(0,0,0,0), "mm")) +
+  xlab("") + ylab("") +
+  coord_sf(ylim = c(36.8, 40.5), 
+           xlim = c(-106.5, -102)) +
+  north(x.min = -106.5, x.max = -102,
+        y.min =  36.8, y.max = 40.5,
+        symbol = 12, location = "bottomright", scale = 0.075,
+        anchor = c(x = -102.75, y = 37.25)) +
+  scalebar(x.min = -106.5, x.max = -102,
+           y.min =  36.8, y.max = 40.5,
+           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+o3_winter
+
+#' O3, Summer
+s <- 10
+i <- 2
+
+load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
+zcta_ids <- unique(zcta$GEOID10)
+zcta_within_ids <- unique(zcta_within$GEOID10)
+rm(zcta, zcta_within)
+
+#' Read in change in "annual" concentration
+load(paste("./HIA Inputs/", pre[s], pol_names[i], "_zcta_metrics.RData", sep=""))
+mean_df <- zcta_list[["ann_mean"]]
+
+#' Plot changes in exposure
+o3_summer_zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
+  select(GEOID10) %>%
+  st_transform(crs = ll_wgs84) %>% 
+  left_join(mean_df, by="GEOID10") %>% 
+  filter(!is.na(wt_conc))
+plot(st_geometry(o3_summer_zcta))
+plot(o3_summer_zcta["wt_conc"])
+
+o3_summer <- ggplot() +
+  geom_sf(data = o3_summer_zcta, aes(fill = wt_conc), inherit.aes = F,
+          color = NA) +
+  # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
+  #         show.legend = "point") +
+  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+                  colour = "red", segment.colour = "red", segment.size = 0.3,
+                  inherit.aes = F, show.legend = F) +
+  scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) + 
+  map_theme +
+  theme(legend.position = c(0.8, 0.8),
+        plot.margin=grid::unit(c(0,0,0,0), "mm")) +
+  xlab("") + ylab("") +
+  coord_sf(ylim = c(36.8, 40.5), 
+           xlim = c(-106.5, -102)) +
+  north(x.min = -106.5, x.max = -102,
+        y.min =  36.8, y.max = 40.5,
+        symbol = 12, location = "bottomright", scale = 0.075,
+        anchor = c(x = -102.75, y = 37.25)) +
+  scalebar(x.min = -106.5, x.max = -102,
+           y.min =  36.8, y.max = 40.5,
+           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+o3_summer
+
+
+#' Combine them!
+library(ggpubr)
+
+hs2_maps <- ggarrange(pm_summer, o3_summer, pm_winter, o3_winter, 
+                      labels = c("A: Summer", "B: Summer", "C: Winter", "D: Winter"),
+                      ncol = 2, nrow = 2)
+hs2_maps
+ggsave(hs2_maps,
+       filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/HS2_Change_in_Exposure.jpeg", 
+       device = "jpeg", dpi=500, units = "in", height = 8, width = 7)
+
 #' -----------------------------------------------------------------------------
 #' Avoided premature deaths
 #' -----------------------------------------------------------------------------
@@ -499,6 +727,11 @@ all_impacts <- ungroup(combined_df) %>%
   select(zcta, pol, outcome, median_scaled, total_pop) %>% 
   mutate(pol = as.character(pol)) %>%
   mutate(rate = (median_scaled / total_pop) * rate_pop)
+
+#' get population data for ZCTAs
+pop_zcta <- select(all_impacts, zcta, total_pop) %>% 
+  distinct()
+summary(pop_zcta)
 
 springs_impacts <- ungroup(combined_df) %>%
   left_join(ses, by="zcta") %>% 
