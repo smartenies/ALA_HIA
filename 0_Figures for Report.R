@@ -245,7 +245,8 @@ pm_winter_zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
   select(GEOID10) %>%
   st_transform(crs = ll_wgs84) %>% 
   left_join(mean_df, by="GEOID10") %>% 
-  filter(!is.na(wt_conc))
+  filter(!is.na(wt_conc)) %>% 
+  mutate(wt_conc = wt_conc * (-1))
 plot(st_geometry(pm_winter_zcta))
 plot(pm_winter_zcta["wt_conc"])
 
@@ -259,7 +260,10 @@ pm_winter <- ggplot() +
                   stat = "sf_coordinates", direction = "x", nudge_x = 2,
                   colour = "red", segment.colour = "red", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
-  scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
+  # scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
+  scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
+                     breaks = c(max(pm_summer_zcta$wt_conc), -0.04, -0.08, -0.12),
+                     labels = c("0.0", "-0.04", "-0.08", "-0.1")) +
   map_theme +
   theme(legend.position = c(0.8, 0.8),
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
@@ -294,7 +298,8 @@ pm_summer_zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
   select(GEOID10) %>%
   st_transform(crs = ll_wgs84) %>% 
   left_join(mean_df, by="GEOID10") %>% 
-  filter(!is.na(wt_conc))
+  filter(!is.na(wt_conc)) %>% 
+  mutate(wt_conc = wt_conc * (-1))
 plot(st_geometry(pm_summer_zcta))
 plot(pm_summer_zcta["wt_conc"])
 
@@ -307,10 +312,10 @@ pm_summer <- ggplot() +
                   stat = "sf_coordinates", direction = "x", nudge_x = 2,
                   colour = "red", segment.colour = "red", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
-  scale_fill_viridis(name = paste(pol_map[i], unit_map[i]), 
-                     breaks = c(min(pm_summer_zcta$wt_conc), 0.1, 0.2, 0.3, 0.4),
-                     labels = c(round(min(pm_summer_zcta$wt_conc),1), 
-                                "0.1", "0.2", "0.3", "0.4")) + 
+  # scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
+  scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
+                     breaks = c(max(pm_summer_zcta$wt_conc), -0.1, -0.2, -0.3, -0.4),
+                     labels = c("0.0", "-0.1", "-0.2", "-0.3", "-0.4")) +
   map_theme +
   theme(legend.position = c(0.8, 0.8),
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
@@ -345,7 +350,8 @@ o3_winter_zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
   select(GEOID10) %>%
   st_transform(crs = ll_wgs84) %>% 
   left_join(mean_df, by="GEOID10") %>% 
-  filter(!is.na(wt_conc))
+  filter(!is.na(wt_conc)) %>% 
+  mutate(wt_conc = wt_conc * (-1))
 plot(st_geometry(o3_winter_zcta))
 plot(o3_winter_zcta["wt_conc"])
 
@@ -359,9 +365,8 @@ o3_winter <- ggplot() +
                   colour = "red", segment.colour = "red", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
-                     breaks = c(max(o3_winter_zcta$wt_conc), -0.1, -0.2, -0.3, -0.4),
-                     labels = c(round(max(o3_winter_zcta$wt_conc),1), 
-                                "-0.1", "-0.2", "-0.3", "-0.4")) + 
+                     breaks = c(min(o3_winter_zcta$wt_conc), 0.1, 0.2, 0.3, 0.4),
+                     labels = c("0.0", "0.1", "0.2", "0.3", "0.4")) + 
   map_theme +
   theme(legend.position = c(0.8, 0.8),
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
@@ -396,7 +401,8 @@ o3_summer_zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
   select(GEOID10) %>%
   st_transform(crs = ll_wgs84) %>% 
   left_join(mean_df, by="GEOID10") %>% 
-  filter(!is.na(wt_conc))
+  filter(!is.na(wt_conc)) %>% 
+  mutate(wt_conc = wt_conc * (-1))
 plot(st_geometry(o3_summer_zcta))
 plot(o3_summer_zcta["wt_conc"])
 
@@ -409,7 +415,9 @@ o3_summer <- ggplot() +
                   stat = "sf_coordinates", direction = "x", nudge_x = 2,
                   colour = "red", segment.colour = "red", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
-  scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) + 
+  scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
+                     breaks = c(0, 0.25, 0.50, 0.75),
+                     labels = c("0.0", "0.2", "0.5", "0.8")) + 
   map_theme +
   theme(legend.position = c(0.8, 0.8),
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
@@ -477,7 +485,8 @@ pm_winter_zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
   select(GEOID10) %>%
   st_transform(crs = ll_wgs84) %>% 
   left_join(mean_df, by="GEOID10") %>% 
-  filter(!is.na(wt_conc))
+  filter(!is.na(wt_conc)) %>% 
+  mutate(wt_conc = wt_conc * (-1))
 plot(st_geometry(pm_winter_zcta))
 plot(pm_winter_zcta["wt_conc"])
 
@@ -491,7 +500,10 @@ pm_winter <- ggplot() +
                   stat = "sf_coordinates", direction = "x", nudge_x = 2,
                   colour = "red", segment.colour = "red", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
-  scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
+  # scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
+  scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
+                     breaks = c(0, -0.025, -0.050, -0.075),
+                     labels = c("0.0", "-0.02", "-0.05", "-0.08")) +
   map_theme +
   theme(legend.position = c(0.8, 0.8),
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
@@ -526,7 +538,8 @@ pm_summer_zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
   select(GEOID10) %>%
   st_transform(crs = ll_wgs84) %>% 
   left_join(mean_df, by="GEOID10") %>% 
-  filter(!is.na(wt_conc))
+  filter(!is.na(wt_conc)) %>% 
+  mutate(wt_conc = wt_conc * (-1))
 plot(st_geometry(pm_summer_zcta))
 plot(pm_summer_zcta["wt_conc"])
 
@@ -539,10 +552,10 @@ pm_summer <- ggplot() +
                   stat = "sf_coordinates", direction = "x", nudge_x = 2,
                   colour = "red", segment.colour = "red", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
-  scale_fill_viridis(name = paste(pol_map[i], unit_map[i]), 
-                     breaks = c(min(pm_summer_zcta$wt_conc), 0.1, 0.2, 0.3, 0.4),
-                     labels = c(round(min(pm_summer_zcta$wt_conc),1), 
-                                "0.1", "0.2", "0.3", "0.4")) + 
+  # scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
+  scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
+                     breaks = c(max(pm_summer_zcta$wt_conc), -0.025, -0.05, -0.075, -0.10, -0.125),
+                     labels = c("0.0", "-0.02", "-0.05", "-0.08",  "-0.10", "-0.13")) +
   map_theme +
   theme(legend.position = c(0.8, 0.8),
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
@@ -577,7 +590,8 @@ o3_winter_zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
   select(GEOID10) %>%
   st_transform(crs = ll_wgs84) %>% 
   left_join(mean_df, by="GEOID10") %>% 
-  filter(!is.na(wt_conc))
+  filter(!is.na(wt_conc)) %>% 
+  mutate(wt_conc = wt_conc * (-1))
 plot(st_geometry(o3_winter_zcta))
 plot(o3_winter_zcta["wt_conc"])
 
@@ -590,10 +604,10 @@ o3_winter <- ggplot() +
                   stat = "sf_coordinates", direction = "x", nudge_x = 2,
                   colour = "red", segment.colour = "red", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
+  # scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
   scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
-                     breaks = c(max(o3_winter_zcta$wt_conc), -0.1, -0.2, -0.3, -0.4),
-                     labels = c(round(max(o3_winter_zcta$wt_conc),1), 
-                                "-0.1", "-0.2", "-0.3", "-0.4")) + 
+                     breaks = c(min(o3_winter_zcta$wt_conc), 0.05, 0.1, 0.15),
+                     labels = c("0.0", "0.05", "0.1", "0.2")) +
   map_theme +
   theme(legend.position = c(0.8, 0.8),
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
@@ -628,7 +642,8 @@ o3_summer_zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
   select(GEOID10) %>%
   st_transform(crs = ll_wgs84) %>% 
   left_join(mean_df, by="GEOID10") %>% 
-  filter(!is.na(wt_conc))
+  filter(!is.na(wt_conc)) %>% 
+  mutate(wt_conc = wt_conc * (-1))
 plot(st_geometry(o3_summer_zcta))
 plot(o3_summer_zcta["wt_conc"])
 
@@ -641,7 +656,10 @@ o3_summer <- ggplot() +
                   stat = "sf_coordinates", direction = "x", nudge_x = 2,
                   colour = "red", segment.colour = "red", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
-  scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) + 
+  # scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
+  scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
+                     breaks = c(min(o3_summer_zcta$wt_conc), 0.20, 0.40, 0.55),
+                     labels = c("0.0", "0.2", "0.4", "0.6")) +
   map_theme +
   theme(legend.position = c(0.8, 0.8),
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
