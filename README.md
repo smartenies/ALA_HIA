@@ -13,10 +13,13 @@ Colorado
 
 Project is sponsored by the American Lung Association
 
+The methods used in this analysis were based on those for the study done by Jacob Pratt, Ryan Gan, and others here at CSU. In this original study, they estimated the impacts of wildfire-smoke related ozone for the entire United States. Because we had a smaller study area, we were able to include more sources of uncertainty.
+
+The scripts are numbered for the order in which they should be run.
+
+
 ###Major deadlines:
 1) Report due to ALA in January, 2018
-
-
 
 ###Analytical Notes:
 09.18.17	Created GitHub repository
