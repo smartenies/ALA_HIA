@@ -1613,6 +1613,7 @@ ggsave(ses_plots,
        filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/SES_plots.jpeg", 
        device = "jpeg", dpi=500, units = "in", height = 8, width = 8)
 
+
 sup_ses_plots <- ggarrange(
   annotate_figure(ggarrange(springs_high_ed, springs_not_limited_eng, springs_emp, 
                             labels = c("A: High School graduates", "B: Proficient English",
@@ -1626,6 +1627,7 @@ sup_ses_plots <- ggarrange(
                   left = text_grob("Pueblo", rot = 90, face = "bold")),
   ncol = 1, nrow = 2)
 sup_ses_plots
+
 ggsave(sup_ses_plots,
        filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Supplement_SES_plots.jpeg", 
        device = "jpeg", dpi=500, units = "in", height = 8, width = 12)
@@ -1659,6 +1661,37 @@ sup_hosp_plots <- ggarrange(
 sup_hosp_plots
 ggsave(sup_hosp_plots,
        filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Hospitalization_plots.jpeg", 
+       device = "jpeg", dpi=500, units = "in", height = 8, width = 8)
+
+
+combo_plots_springs <- ggarrange(
+  annotate_figure(ggarrange(springs_nhw, springs_income, 
+                            labels = c("A: Non-Hispanic White", "B: Median income"), 
+                            ncol = 2, nrow = 1),
+                  left = text_grob("Social Advantage Indicators", rot = 90, face = "bold")),
+  annotate_figure(ggarrange(springs_ac_mort, springs_na_mort, 
+                            labels = c("C: All-cause", "D: Non-accidental"), 
+                            ncol = 2, nrow = 1),
+                  left = text_grob("Avoided Deaths", rot = 90, face = "bold")),
+  ncol = 1, nrow = 2)
+combo_plots_springs
+ggsave(combo_plots_springs,
+       filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/SES_Benefits_Springs.jpeg", 
+       device = "jpeg", dpi=500, units = "in", height = 8, width = 8)
+
+combo_plots_pueblo <- ggarrange(
+  annotate_figure(ggarrange(pueblo_nhw, pueblo_income, 
+                            labels = c("A: Non-Hispanic White", "B: Median income"), 
+                            ncol = 2, nrow = 1),
+                  left = text_grob("Social Advantage Indicators", rot = 90, face = "bold")),
+  annotate_figure(ggarrange(pueblo_ac_mort, pueblo_na_mort, 
+                            labels = c("C: All-cause", "D: Non-accidental"), 
+                            ncol = 2, nrow = 1),
+                  left = text_grob("Avoided Deaths", rot = 90, face = "bold")),
+  ncol = 1, nrow = 2)
+combo_plots_pueblo
+ggsave(combo_plots_pueblo,
+       filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/SES_Benefits_Pueblo.jpeg", 
        device = "jpeg", dpi=500, units = "in", height = 8, width = 8)
 
 #' -----------------------------------------------------------------------------
