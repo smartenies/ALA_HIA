@@ -2,9 +2,10 @@
 .Rhistory
 .RData
 .Ruserdata
+
+# ignore folders
 /BenMAP Materials
 /Data
-/FRESHEST Code
 /HIA Inputs
 /HIA Outputs
 /Manuscript

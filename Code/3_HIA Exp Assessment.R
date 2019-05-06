@@ -121,8 +121,9 @@ if (!(is.na(cmaq_scenario[s]))) {
   rm(scenario)
 }
 
-
 save(baseline, file=paste("./HIA Inputs/", pre[s], "CMAQ_output.RData", sep=""))
+load(paste("./HIA Inputs/", pre[s], "CMAQ_output.RData", sep=""))
+
 
 #' -----------------------------------------------------------------------------
 #' Calculate annual and daily metrics for each pollutant
@@ -145,6 +146,17 @@ cmaq_ids <- unique(cmaq_p$id)
 
 plot(cmaq_p)
 plot(hia_boundary, border="red", add=T)
+
+# pts_df <- as.data.frame(cmaq_p@data)
+# pts_df[1,]
+# pts_df[which.max(pts_df$lat),]
+# pts_df[which.max(pts_df$lon),]
+# 
+# crs(cmaq_p)
+# pts <- st_as_sf(as.data.frame(cmaq_p@data), coords = c("lon", "lat"),
+#                 crs = ll_wgs84)
+# plot(st_geometry(pts[1,]), add = T, col = "red", cex=3)
+# plot(st_geometry(filter(pts, id == "5603")), add = T, col = "red", cex=3)
 
 save(cmaq_e, cmaq_p, cmaq_ids,
      file=paste("./HIA Inputs/", pre[s], "cmaq_spatial.RData", sep=""))
