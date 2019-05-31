@@ -54,11 +54,12 @@ pre <- c("HIA_Winter_AllCO_",
          "HIA_Summer_AllCO_",
          "HIA_CF_BL_Winter_AllCO_",
          "HIA_CF_BL_Summer_AllCO_")
-# pre <- c("BoD_Winter_", 
+
+# pre <- c("BoD_Winter_",
 #          "BoD_Summer_",
-#          "BoD_Winter_2017_", 
+#          "BoD_Winter_2017_",
 #          "BoD_Summer_2017_",
-#          "BoD_Winter_2035_", 
+#          "BoD_Winter_2035_",
 #          "BoD_Summer_2035_",
 #          "HIA_Winter_",
 #          "HIA_Summer_",
@@ -76,6 +77,7 @@ pre <- c("HIA_Winter_AllCO_",
 #'     "Baseline" is the baseline case, or starting point
 #'     "Scenario" gets substracted from the baseline case
 #'     If just doing total burden, set cmaq_scenario to NA
+
 cmaq_baseline <- c("southern_colorado_2011018_2011052.nc",
                    "southern_colorado_2011196_2011230.nc",
                    "southern_colorado_2017018_2017052.nc",
@@ -186,7 +188,8 @@ zcta_type <- "all_co"
 rate_pop <- 10000
 
 #' How many days should be used to scale the modeled estimates?
-#' For seasonal estimate, use 365/2
+#' For seasonal estimate, use 365/2 (i.e., summer represents half the year and
+#' winter represents the other half)
 d_per_y <- 365/2
 
 #' how many iterations should be used in the MC?
