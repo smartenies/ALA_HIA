@@ -18,17 +18,20 @@
 
 source("0_HIA Header.R")
 
-#' #' Pool the CRs
-#' #' Only need to run once, but it doesn't hurt to keep it 
-#' source("2_HIA CR Pooling.R")
-#' 
-#' #' summarize population estimates
-#' #' Again, only need to run once, but it doesn't change anything to run again
-#' source("2_Population Estimates.R")
-#' 
-#' #' Compile the HIA databases
-#' #' Same as above
-#' source("2_HIA Databases.R")
+#' Get the ZCTAs in order
+source("2_HIA Spatial Databases.R")
+
+#' Pool the CRs
+#' Only need to run once, but it doesn't hurt to keep it
+source("2_HIA CR Pooling.R")
+
+#' summarize population estimates
+#' Again, only need to run once, but it doesn't change anything to run again
+source("2_Population Estimates.R")
+
+#' Compile the HIA databases
+#' Same as above
+source("2_HIA Databases.R")
 
 #' Loop through each step in the HIA
 start <- Sys.time()

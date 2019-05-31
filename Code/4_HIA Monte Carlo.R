@@ -86,10 +86,12 @@ for (i in 1:length(pol_names)) {
       
       #' Loop through zctas
       zctas <- unique(as.character(zcta$GEOID10))
+      
       for (l in 1:length(zctas)) {
         
         #' empty vector to hold the daily estimates for each ZCTA
         hia <- vector()
+        temp_hia <- data.frame()
         
         #' Baseline rate (y0)
         #' Only use a distribution if a standard error is available
@@ -138,27 +140,39 @@ for (i in 1:length(pol_names)) {
             #' apply the HIF
             hia[[length(hia)+1]] <- (n_y0*(1-exp((-n_beta)*(n_exp)))*n_risk)
           }
+          
+          temp <- data.frame(zcta = zctas[l],
+                             day = days[m],
+                             outcome = as.character(outcomes[k]),
+                             metric = as.character(metrics[j]),
+                             pol = pol_names[i],
+                             median = median(hia, na.rm = T),
+                             p2.5 = quantile(hia, probs = 0.025, na.rm = T),
+                             p97.5 = quantile(hia, probs = 0.975, na.rm = T))
+          temp_hia <- bind_rows(temp_hia, temp)
         }
         
         #' find median, 2.5th and 97.5th percentiles for the daily estimates
-        #' all rates are daily, so need to scale by the number of days modeled
+        #' all rates are daily, so need to scale them up to get impacts per
+        #' season (365/2 for summer and winter each)
         scale <- d_per_y / length(days)
                         
-        temp <- data.frame(zcta = zctas[l],
-                           n_days = length(days),
-                           scale = scale,
-                           outcome = as.character(outcomes[k]),
-                           metric = as.character(metrics[j]),
-                           pol = pol_names[i],
-                           median = median(hia, na.rm = T),
-                           p2.5 = quantile(hia, probs = 0.025, na.rm = T),
-                           p97.5 = quantile(hia, probs = 0.975, na.rm = T))
-        temp$median_scaled <- temp$median * temp$scale
-        temp$p2.5_scaled <- temp$p2.5 * temp$scale
-        temp$p97.5_scaled <- temp$p97.5 * temp$scale
+        temp2 <- temp %>% 
+          summarize(zcta = zctas[l],
+                    n_days = length(days),
+                    scale = scale,
+                    outcome = as.character(outcomes[k]),
+                    metric = as.character(metrics[j]),
+                    pol = pol_names[i],
+                    median = sum(median, na.rm = T),
+                    p2.5 = sum(p2.5, na.rm = T),
+                    p97.5 = sum(p97.5, na.rm = T)) %>% 
+          mutate(median_scaled = median * scale,
+                 p2.5_scaled = p2.5 * scale,
+                 p97.5_scaled = p97.5 * scale)
         
         #' Append results
-        out_df <- rbind(out_df, temp)
+        out_df <- rbind(out_df, temp2)
         rm(temp, hia)
       }
     }

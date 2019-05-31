@@ -122,8 +122,6 @@ if (!(is.na(cmaq_scenario[s]))) {
 }
 
 save(baseline, file=paste("./HIA Inputs/", pre[s], "CMAQ_output.RData", sep=""))
-load(paste("./HIA Inputs/", pre[s], "CMAQ_output.RData", sep=""))
-
 
 #' -----------------------------------------------------------------------------
 #' Calculate annual and daily metrics for each pollutant
@@ -163,7 +161,7 @@ save(cmaq_e, cmaq_p, cmaq_ids,
 
 load(file=paste("./HIA Inputs/", pre[s], "CMAQ_output.RData", sep=""))
 
-#' Sequence of dates based on start date and end date
+#' Sequence of dates based on start date and end date of the baseline scenario
 date_seq <- seq.Date(from=start_dates[s], to=end_dates[s], by="day")
 
 for (i in 1:length(baseline)) {

@@ -50,22 +50,26 @@ albers <- "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 
 #' -----------------------------------------------------------------------------
  
 #' Unique prefixes for each run
-pre <- c("BoD_Winter_", 
-         "BoD_Summer_",
-         "BoD_Winter_2017_", 
-         "BoD_Summer_2017_",
-         "BoD_Winter_2035_", 
-         "BoD_Summer_2035_",
-         "HIA_Winter_",
-         "HIA_Summer_",
-         "HIA_CF_Baseline_Winter_",
-         "HIA_CF_Baseline_Summer_",
-         "HIA_MD_BL2011_CMCH_Off_Winter",
-         "HIA_MD_BL2011_CMCH_Off_Summer",
-         "HIA_MD_BL2017_CMCH_Off_Winter",
-         "HIA_MD_BL2017_CMCH_Off_Summer",
-         "HIA_MD_Off_CMCH_BL2011_Winter",
-         "HIA_MD_Off_CMCH_BL2011_Summer")
+pre <- c("HIA_Winter_AllCO_",
+         "HIA_Summer_AllCO_",
+         "HIA_CF_BL_Winter_AllCO_",
+         "HIA_CF_BL_Summer_AllCO_")
+# pre <- c("BoD_Winter_", 
+#          "BoD_Summer_",
+#          "BoD_Winter_2017_", 
+#          "BoD_Summer_2017_",
+#          "BoD_Winter_2035_", 
+#          "BoD_Summer_2035_",
+#          "HIA_Winter_",
+#          "HIA_Summer_",
+#          "HIA_CF_Baseline_Winter_",
+#          "HIA_CF_Baseline_Summer_",
+#          "HIA_MD_BL2011_CMCH_Off_Winter",
+#          "HIA_MD_BL2011_CMCH_Off_Summer",
+#          "HIA_MD_BL2017_CMCH_Off_Winter",
+#          "HIA_MD_BL2017_CMCH_Off_Summer",
+#          "HIA_MD_Off_CMCH_BL2011_Winter",
+#          "HIA_MD_Off_CMCH_BL2011_Summer")
 
 #' Exposure assessment setup:
 #' Order should match list of prefixes above
@@ -75,74 +79,96 @@ pre <- c("BoD_Winter_",
 cmaq_baseline <- c("southern_colorado_2011018_2011052.nc",
                    "southern_colorado_2011196_2011230.nc",
                    "southern_colorado_2017018_2017052.nc",
-                   "southern_colorado_2017196_2017230.nc",
-                   "southern_colorado_2035018_2035052.nc",
-                   "southern_colorado_2035196_2035230.nc",
-                   "southern_colorado_2011018_2011052.nc",
-                   "southern_colorado_2011196_2011230.nc",
-                   "southern_colorado_2017018_2017052.nc",
-                   "southern_colorado_2017196_2017230.nc",
-                   "southern_colorado_2011018_2011052.nc",
-                   "southern_colorado_2011196_2011230.nc",
-                   "southern_colorado_2017018_2017052.nc",
-                   "southern_colorado_2017196_2017230.nc",
-                   "southern_colorado_2011018_2011052.nc",
-                   "southern_colorado_2011196_2011230.nc")
+                   "southern_colorado_2017196_2017230.nc")
 
-cmaq_scenario <- c(NA, 
-                   NA,
-                   NA,
-                   NA,
-                   NA,
-                   NA,
-                   "southern_colorado_2035018_2035052.nc",
+# cmaq_baseline <- c("southern_colorado_2011018_2011052.nc",
+#                    "southern_colorado_2011196_2011230.nc",
+#                    "southern_colorado_2017018_2017052.nc",
+#                    "southern_colorado_2017196_2017230.nc",
+#                    "southern_colorado_2035018_2035052.nc",
+#                    "southern_colorado_2035196_2035230.nc",
+#                    "southern_colorado_2011018_2011052.nc",
+#                    "southern_colorado_2011196_2011230.nc",
+#                    "southern_colorado_2017018_2017052.nc",
+#                    "southern_colorado_2017196_2017230.nc",
+#                    "southern_colorado_2011018_2011052.nc",
+#                    "southern_colorado_2011196_2011230.nc",
+#                    "southern_colorado_2017018_2017052.nc",
+#                    "southern_colorado_2017196_2017230.nc",
+#                    "southern_colorado_2011018_2011052.nc",
+#                    "southern_colorado_2011196_2011230.nc")
+
+cmaq_scenario <- c("southern_colorado_2035018_2035052.nc",
                    "southern_colorado_2035196_2035230.nc",
                    "southern_colorado_2035018_2035052.nc",
-                   "southern_colorado_2035196_2035230.nc",
-                   "southern_colorado_winter_2011MD_2035CMCH_18.52.nc",
-                   "southern_colorado_summer_2011MD_2035CMCH_196.230.nc",
-                   "southern_colorado_winter_2017MD_2035CMCH_18.52.nc",
-                   "southern_colorado_summer_2017MD_2035CMCH_196.230.nc",
-                   "southern_colorado_winter_2011CMCH_2035MD_18.52.nc",
-                   "southern_colorado_summer_2011CMCH_2035MD_196.230.nc")
+                   "southern_colorado_2035196_2035230.nc")
+
+# cmaq_scenario <- c(NA, 
+#                    NA,
+#                    NA,
+#                    NA,
+#                    NA,
+#                    NA,
+#                    "southern_colorado_2035018_2035052.nc",
+#                    "southern_colorado_2035196_2035230.nc",
+#                    "southern_colorado_2035018_2035052.nc",
+#                    "southern_colorado_2035196_2035230.nc",
+#                    "southern_colorado_winter_2011MD_2035CMCH_18.52.nc",
+#                    "southern_colorado_summer_2011MD_2035CMCH_196.230.nc",
+#                    "southern_colorado_winter_2017MD_2035CMCH_18.52.nc",
+#                    "southern_colorado_summer_2017MD_2035CMCH_196.230.nc",
+#                    "southern_colorado_winter_2011CMCH_2035MD_18.52.nc",
+#                    "southern_colorado_summer_2011CMCH_2035MD_196.230.nc")
 
 #' CMAQ start dates
 #' Order should match list of prefixes above
+
 start_dates <- c(as.Date("01-18-2011", format="%m-%d-%Y"),
-                 as.Date("07-15-2011", format="%m-%d-%Y"),
-                 as.Date("01-18-2011", format="%m-%d-%Y"),
-                 as.Date("07-15-2011", format="%m-%d-%Y"),
-                 as.Date("01-18-2011", format="%m-%d-%Y"),
-                 as.Date("07-15-2011", format="%m-%d-%Y"), 
-                 as.Date("01-18-2011", format="%m-%d-%Y"),
-                 as.Date("07-15-2011", format="%m-%d-%Y"),
-                 as.Date("01-18-2011", format="%m-%d-%Y"),
-                 as.Date("07-15-2011", format="%m-%d-%Y"),
-                 as.Date("01-18-2011", format="%m-%d-%Y"),
-                 as.Date("07-15-2011", format="%m-%d-%Y"),
-                 as.Date("01-18-2011", format="%m-%d-%Y"),
                  as.Date("07-15-2011", format="%m-%d-%Y"),
                  as.Date("01-18-2011", format="%m-%d-%Y"),
                  as.Date("07-15-2011", format="%m-%d-%Y"))
 
+# start_dates <- c(as.Date("01-18-2011", format="%m-%d-%Y"),
+#                  as.Date("07-15-2011", format="%m-%d-%Y"),
+#                  as.Date("01-18-2011", format="%m-%d-%Y"),
+#                  as.Date("07-15-2011", format="%m-%d-%Y"),
+#                  as.Date("01-18-2011", format="%m-%d-%Y"),
+#                  as.Date("07-15-2011", format="%m-%d-%Y"), 
+#                  as.Date("01-18-2011", format="%m-%d-%Y"),
+#                  as.Date("07-15-2011", format="%m-%d-%Y"),
+#                  as.Date("01-18-2011", format="%m-%d-%Y"),
+#                  as.Date("07-15-2011", format="%m-%d-%Y"),
+#                  as.Date("01-18-2011", format="%m-%d-%Y"),
+#                  as.Date("07-15-2011", format="%m-%d-%Y"),
+#                  as.Date("01-18-2011", format="%m-%d-%Y"),
+#                  as.Date("07-15-2011", format="%m-%d-%Y"),
+#                  as.Date("01-18-2011", format="%m-%d-%Y"),
+#                  as.Date("07-15-2011", format="%m-%d-%Y"))
+
 #' CMAQ end dates
 #' Order should match list of prefixes above
+
 end_dates <- c(as.Date("02-21-2011", format="%m-%d-%Y"),
                as.Date("08-18-2011", format="%m-%d-%Y"),
                as.Date("02-21-2011", format="%m-%d-%Y"),
-               as.Date("08-18-2011", format="%m-%d-%Y"),
-               as.Date("02-21-2011", format="%m-%d-%Y"),
-               as.Date("08-18-2011", format="%m-%d-%Y"),
-               as.Date("02-21-2011", format="%m-%d-%Y"),
-               as.Date("08-18-2011", format="%m-%d-%Y"),
-               as.Date("02-21-2011", format="%m-%d-%Y"),
-               as.Date("08-18-2011", format="%m-%d-%Y"),
-               as.Date("02-21-2011", format="%m-%d-%Y"),
-               as.Date("08-18-2011", format="%m-%d-%Y"),
-               as.Date("02-21-2011", format="%m-%d-%Y"),
-               as.Date("08-18-2011", format="%m-%d-%Y"),
-               as.Date("02-21-2011", format="%m-%d-%Y"),
                as.Date("08-18-2011", format="%m-%d-%Y"))
+
+# end_dates <- c(as.Date("02-21-2011", format="%m-%d-%Y"),
+#                as.Date("08-18-2011", format="%m-%d-%Y"),
+#                as.Date("02-21-2011", format="%m-%d-%Y"),
+#                as.Date("08-18-2011", format="%m-%d-%Y"),
+#                as.Date("02-21-2011", format="%m-%d-%Y"),
+#                as.Date("08-18-2011", format="%m-%d-%Y"),
+#                as.Date("02-21-2011", format="%m-%d-%Y"),
+#                as.Date("08-18-2011", format="%m-%d-%Y"),
+#                as.Date("02-21-2011", format="%m-%d-%Y"),
+#                as.Date("08-18-2011", format="%m-%d-%Y"),
+#                as.Date("02-21-2011", format="%m-%d-%Y"),
+#                as.Date("08-18-2011", format="%m-%d-%Y"),
+#                as.Date("02-21-2011", format="%m-%d-%Y"),
+#                as.Date("08-18-2011", format="%m-%d-%Y"),
+#                as.Date("02-21-2011", format="%m-%d-%Y"),
+#                as.Date("08-18-2011", format="%m-%d-%Y"))
 
 #' Which year should we use for the population density? 2010 or 2015
 pop_den_tif <- "2010-COloradoPopDensity.tif"
@@ -151,6 +177,10 @@ pop_den_tif <- "2010-COloradoPopDensity.tif"
 #' The variogram fitting step doesn't do well with small numbers
 #' due to truncation issues
 exp_scale <- 10**9
+
+#' which ZCTA file?
+zcta_type <- "all_co"
+# zcta_type <- "sfr"
 
 #' Population for mapping rates
 rate_pop <- 10000

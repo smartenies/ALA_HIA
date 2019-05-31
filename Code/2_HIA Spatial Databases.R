@@ -15,37 +15,7 @@
 #' This scrip specifies the spatial data used in the HIA
 #' =============================================================================
 
-library(sf)
-library(Hmisc)
-library(ggplot2)
-library(raster)
-library(rgeos)
-library(ggthemes)
-library(dplyr)
-library(stringr)
-library(readxl)
-
-#' For ggplots
-simple_theme <- theme(
-  #aspect.ratio = 1,
-  text  = element_text(family="Calibri",size = 12, color = 'black'),
-  panel.spacing.y = unit(0,"cm"),
-  panel.spacing.x = unit(0.25, "lines"),
-  panel.grid.minor = element_blank(),
-  panel.grid.major = element_line(color="transparent"),
-  panel.border=element_rect(fill = NA),
-  panel.background=element_blank(),
-  axis.ticks = element_line(colour = "black"),
-  axis.text = element_text(color = "black", size=10),
-  # legend.position = c(0.1,0.1),
-  plot.margin=grid::unit(c(0,0,0,0), "mm"),
-  legend.key = element_blank()
-)
-windowsFonts(Calibri=windowsFont("TT Calibri"))
-options(scipen = 9999) #avoid scientific notation
-
 geo_data <- "T:/Rsch-MRS/ECHO/SEM Large Data/Spatial Data/"
-albers <- "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
 
 #' =============================================================================
 #' Object for the location of the power plants
@@ -73,6 +43,9 @@ co_zcta <- st_read(paste(geo_data, "CO_ZCTA_2014.shp", sep="")) %>%
 
 plot(st_geometry(co_zcta))
 save(co_zcta, file="./Data/Spatial Data/co_zcta.RData")
+
+co_zcta_bound <- st_union(co_zcta)
+plot(st_geometry(co_zcta_bound), border = "red", add = T)
 
 #' CO Counties
 co_counties <- st_read(paste(geo_data, "us_counties_2010.shp", sep="")) %>%
@@ -117,14 +90,24 @@ sfr_zcta <- st_join(co_zcta, sfr_counties) %>%
 save(sfr_zcta, file="./Data/Spatial Data/sfr_zcta.RData")
 
 #' HIA boundary for CMAQ points
-hia_boundary <- st_read(paste(geo_data, "ALA_HIA_bound.shp", sep="")) %>%
-  st_transform(crs = albers)
-head(hia_boundary)
-plot(st_geometry(hia_boundary))
-save(hia_boundary, file="./Data/Spatial Data/hia_boundary.RData")
-
-plot(st_geometry(sfr_counties))
-plot(st_geometry(hia_boundary), border="red", add=T)
+if (zcta_type == "all_co") {
+  hia_boundary <- co_zcta_bound %>% 
+    st_transform(crs = albers)
+  
+  head(hia_boundary)
+  plot(st_geometry(hia_boundary))
+  save(hia_boundary, file="./Data/Spatial Data/hia_boundary.RData")
+  
+} else {
+  hia_boundary <- st_read(paste(geo_data, "ALA_HIA_bound.shp", sep="")) %>%
+    st_transform(crs = albers)
+  head(hia_boundary)
+  plot(st_geometry(hia_boundary))
+  save(hia_boundary, file="./Data/Spatial Data/hia_boundary.RData")
+  
+  plot(st_geometry(sfr_counties))
+  plot(st_geometry(hia_boundary), border="red", add=T)
+}
 
 #' Map of the study area
 ggplot() +
@@ -133,9 +116,6 @@ ggplot() +
   geom_sf(data=sfr_zcta, color="black", fill="lightblue", alpha=0.2) +
   geom_sf(data=pp, color="red", pch=16, cex=3) +
   simple_theme
-ggsave(filename = "./Maps/Study Area.jpeg", device = "jpeg", 
-       dpi=400, width = 7, height = 6, units="in")
-
 
 #' =============================================================================
 #' ACS demographic and socioeconomic variables
