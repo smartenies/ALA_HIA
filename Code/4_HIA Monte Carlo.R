@@ -180,7 +180,6 @@ for (i in 1:length(pol_names)) {
 }
 
 #' Valuate the impacts and summarize by pollutant and outcome
-# detach(package:plyr)
 out_df$outcome <- as.character(out_df$outcome)
 out_df <- left_join(out_df, values, by="outcome") %>%
   mutate(median_value = median_scaled * value_2024,
