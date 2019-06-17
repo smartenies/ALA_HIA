@@ -347,15 +347,15 @@ cmaq_r
 
 #' grid needed for interpolation
 cmaq_g <- as(cmaq_r, "SpatialGrid")
+plot(cmaq_g)
 
-#' Get ZCTAs within the Front Range airshed that are covered by the CAMQ raster
 #' Read in the ZCTA shapefile and make sure CRS matches
-load("./Data/Spatial Data/fr_zcta.RData")
-co_zcta <- st_transform(fr_zcta, crs=ll_wgs84) %>%
+load("./Data/Spatial Data/co_zcta.RData")
+co_zcta <- st_transform(co_zcta, crs=ll_wgs84) %>%
   as("Spatial")
 
-# plot(co_zcta)
-# points(cmaq_p, col="red", pch=20, cex=0.5)
+plot(co_zcta)
+points(cmaq_p, col="red", pch=20, cex=0.5)
 
 #' #' Subset ZCTA that are completely within the CMAQ domain
 cmaq_bound <- gConvexHull(cmaq_p)
@@ -416,11 +416,15 @@ pol_names <- c("pm", "o3")
 all_models <- c("Sph", "Exp", "Gau", "Wav", "Exc", 
                 "Ste", "Bes", "Mat", "Cir", "Pen")
 
+#' run in parallel
+
 for (i in 1:length(pol_names)) {
 
   #' read in data
   load(paste("./HIA Inputs/", pre[s], pol_names[i], "_receptor_metrics.RData", 
              sep=""))
+  
+  load(paste("./HIA Inputs/", pre[s], "zcta_weights.RData", sep=""))
   
   metrics <- names(exp_list)
   metrics
@@ -442,136 +446,214 @@ for (i in 1:length(pol_names)) {
     
     #' list of days to loop through
     days <- sort(as.integer(unique(test_p$day)))
-    met_df <- data.frame()
     
-    #' krige cmaq points to the grid
-    for (k in 1:length(days)) {
-      
-      print(paste("Pollutant ", i, " of ", length(pol_names), 
-                  "; Metric ", j, " of ", length(metrics), 
-                  "; Day ", k, " of ", length(days), sep=""))
-      
-      #' subset to daily metric
-      test_p_2 <- test_p[which(test_p$day == days[k]),]
-      
-      #' Plot for report
-      # test_p_sf <- st_as_sf(test_p_2)
-      # ggplot() +
-      #   ggtitle("A: CMAQ Receptor Concentrations") +
-      #   geom_sf(data = test_p_sf, aes(color=ann_mean)) +
-      #   geom_sf(data = st_as_sf(zcta), fill=NA, color="grey50") +
-      #   scale_color_continuous(name = "Concentration",
-      #                          low="yellow", high="red") +
-      #   theme(legend.position = "bottom") +
-      #   simple_theme
-      # ggsave(filename = "./Maps/For Report/CMAQ Receptors.jpeg",
-      #        device = "jpeg", dpi = 300)
-      
-      #' scale exposures in order to avoid errors in kriging
-      #' small values don't do well because issues with truncation!
-      test_p_2@data[(metrics[j])] <- test_p_2@data[(metrics[j])] * exp_scale
-      
-      #' Create a smooth surface using ordinary kriging
-      #'generate the semivariogram
-      cmaq_vgm <- variogram(get(metrics[j]) ~ 1, test_p_2) 
-      # plot(cmaq_vgm)
-      
-      #' Fitting the semivariogram
-      cmaq_fit <- fit.variogram(cmaq_vgm, model=vgm(all_models)) 
-      # plot(cmaq_vgm, cmaq_fit)
-      
-      #' Ordinary kriging using the fitted semivariogram
-      #' Use 24 nearest points (important for ozone)
-      cmaq_ok <- krige(get(metrics[j]) ~ 1, test_p_2, cmaq_g, cmaq_fit,
-                       nmax = 24)
-
-      # spplot(cmaq_ok, "var1.pred",
-      #        main = paste("pol= ", pol_names[i], ", met= ", metrics[j],
-      #                     ", day= ", days[k], sep=""))
-      
-      #' Plot for report
-      # test_ok_sf <- st_as_sf(as(cmaq_ok, "SpatialPointsDataFrame"))
-      # ggplot() +
-      #   ggtitle("B: Kriged 1 km Point Estimates") +
-      #   geom_sf(data = test_ok_sf, aes(color=var1.pred / exp_scale)) +
-      #   geom_sf(data = st_as_sf(zcta), fill=NA, color="grey50") +
-      #   scale_color_continuous(name = "Concentration",
-      #                          low="yellow", high="red") +
-      #   theme(legend.position = "bottom") +
-      #   simple_theme
-      # ggsave(filename = "./Maps/For Report/Kriged Receptors.jpeg",
-      #        device = "jpeg", dpi = 300)
-      
-      #' Turn grid back into raster for zonal statistics
-      #' Want to make sure the grid cells are in the same order as the
-      #' population density raster when they get converted to a data frame
-      cmaq_r <- raster(cmaq_ok)
-      
-      #' Zonal statistics using weights from the population-density raster
-      cmaq_df <- as.data.frame(cmaq_r)
-      cmaq_df$cell <- rownames(cmaq_df)
-      
-      #' Check! Data frame for kriging should match population density
-      if (nrow(cmaq_df) != nrow(pop_den_df_1k)) stop()
-      
-      #' calculate weighted means and SD 
-      #' Need to "unscale" exposure concentrations to get back to original units
-      #' See just before the  for details ()
-      #' (Hmisc) 
-      zcta_conc <- merge(zcta_weights, cmaq_df, by="cell")
-      zcta_conc <- rename(zcta_conc, conc = var1.pred) %>%
-        arrange(id) %>%
-        mutate(conc = conc / exp_scale)
+    #' run in parallel
+    cl <- makeCluster(3)
+    registerDoParallel(cl)
     
-      #' Calculate weighted averages at the ZCTA level
-      #' New weight-- population density * the fraction of the polygon covered 
-      #' by the cell
+    met_df <- foreach(k=1:length(days), .combine = rbind,
+    # met_df <- foreach(k=1:2, .combine = rbind,
+                      .packages = c("sf", "sp", "gstat")) %dopar% {
+                        
+       #' subset to daily metric
+       test_p_2 <- test_p[which(test_p$day == days[k]),]
+                        
+       #' scale exposures in order to avoid errors in kriging
+       #' small values don't do well because issues with truncation!
+       test_p_2@data[(metrics[j])] <- test_p_2@data[(metrics[j])] * exp_scale
+                        
+       #' Create a smooth surface using ordinary kriging
+       #'generate the semivariogram
+       cmaq_vgm <- variogram(get(metrics[j]) ~ 1, test_p_2) 
+       # plot(cmaq_vgm)
+                        
+       #' Fitting the semivariogram
+       cmaq_fit <- fit.variogram(cmaq_vgm, model=vgm(all_models)) 
+       # plot(cmaq_vgm, cmaq_fit)
+                        
+       #' Ordinary kriging using the fitted semivariogram
+       #' Use 24 nearest points (important for ozone)
+       cmaq_ok <- krige(get(metrics[j]) ~ 1, test_p_2, cmaq_g, cmaq_fit,
+                        nmax = 24)
+       
+       # spplot(cmaq_ok, "var1.pred",
+       #        main = paste("pol= ", pol_names[i], ", met= ", metrics[j],
+       #                     ", day= ", days[k], sep=""))
+                        
 
-      zcta_cmaq <- zcta_conc %>%
-        mutate(wt_prod = pop_density * weight) %>%
-        group_by(id) %>%
-        summarise(wt_conc = wtd.mean(x = conc, weights = wt_prod),
-                  wt_conc_sd = sqrt(wtd.var(x = conc, weights = wt_prod))) %>% 
-        left_join(zcta_key, by="id")
-      head(zcta_cmaq)
-      summary(zcta_cmaq)
-      
-      #' Plot for report
-      # test_zcta_sf <- st_as_sf(zcta) %>%
-      #   select(GEOID10) %>%
-      #   left_join(zcta_cmaq, by="GEOID10")
-      # ggplot() +
-      #   ggtitle("C: Population-weighted ZCTA Concentrations") +
-      #   geom_sf(data = test_zcta_sf, aes(fill=wt_conc)) +
-      #   geom_sf(data = st_as_sf(zcta), fill=NA, color="grey50") +
-      #   scale_fill_continuous(name = "Concentration",
-      #                          low="yellow", high="red") +
-      #   theme(legend.position = "bottom") +
-      #   simple_theme
-      # ggsave(filename = "./Maps/For Report/ZCTA Concentrations.jpeg",
-      #        device = "jpeg", dpi = 300)
-      
-      #' Plot exposure concentration
-      #zcta_1 <- merge(zcta, zcta_cmaq, by="GEOID10")
-      #zcta_within_1 <- merge(zcta_within, zcta_cmaq, by="GEOID10")
-      #spplot(zcta_1, "wt_conc",
-      #       main="Predicted monthly average PM2.5\n(ZCTA level using zonal statistics)")
-      
-      #spplot(zcta_within_1, "wt_conc",
-      #       main="Predicted monthly average PM2.5\n(ZCTAs completely within the modeling domain)")
-      
-      #' add indicators for pollutant, metric, and day
-      zcta_cmaq$pol <- pol_names[i]
-      zcta_cmaq$metric <- metrics[j]
-      zcta_cmaq$day <- days[k]
-      
-      met_df <- rbind(met_df, zcta_cmaq)
-      rm(zcta_conc, zcta_cmaq)
+       #' Turn grid back into raster for zonal statistics
+       #' Want to make sure the grid cells are in the same order as the
+       #' population density raster when they get converted to a data frame
+       cmaq_r <- raster(cmaq_ok)
+                       
+       #' Zonal statistics using weights from the population-density raster
+       cmaq_df <- as.data.frame(cmaq_r)
+       cmaq_df$cell <- rownames(cmaq_df)
+                        
+       #' Check! Data frame for kriging should match population density
+       if (nrow(cmaq_df) != nrow(pop_den_df_1k)) stop()
+                        
+       #' calculate weighted means and SD 
+       #' Need to "unscale" exposure concentrations to get back to original units
+       #' See just before the  for details ()
+       #' (Hmisc) 
+       zcta_conc <- merge(zcta_weights, cmaq_df, by="cell")
+       zcta_conc <- rename(zcta_conc, conc = var1.pred) %>%
+          arrange(id) %>%
+          mutate(conc = conc / exp_scale)
+                         
+       #' Calculate weighted averages at the ZCTA level
+       #' New weight-- population density * the fraction of the polygon covered 
+       #' by the cell
+                        
+       zcta_cmaq <- zcta_conc %>%
+         mutate(wt_prod = pop_density * weight) %>%
+         group_by(id) %>%
+         summarise(wt_conc = wtd.mean(x = conc, weights = wt_prod),
+                   wt_conc_sd = sqrt(wtd.var(x = conc, weights = wt_prod))) %>% 
+         left_join(zcta_key, by="id")
+         head(zcta_cmaq)
+         summary(zcta_cmaq)
+                        
+       #' add indicators for pollutant, metric, and day
+       zcta_cmaq$pol <- pol_names[i]
+       zcta_cmaq$metric <- metrics[j]
+       zcta_cmaq$day <- days[k]
+                        
+       zcta_cmaq
     }
-  zcta_list[[j]] <- met_df
-  names(zcta_list)[length(zcta_list)] <- metrics[j]
+    stopCluster(cl)
+    
+    #' Run normally
+    #' #' krige cmaq points to the grid
+    #' for (k in 1:length(days)) {
+    #'   
+    #'   print(paste("Pollutant ", i, " of ", length(pol_names), 
+    #'               "; Metric ", j, " of ", length(metrics), 
+    #'               "; Day ", k, " of ", length(days), sep=""))
+    #'   
+    #'   #' subset to daily metric
+    #'   test_p_2 <- test_p[which(test_p$day == days[k]),]
+    #'   
+    #'   #' Plot for report
+    #'   # test_p_sf <- st_as_sf(test_p_2)
+    #'   # ggplot() +
+    #'   #   ggtitle("A: CMAQ Receptor Concentrations") +
+    #'   #   geom_sf(data = test_p_sf, aes(color=ann_mean)) +
+    #'   #   geom_sf(data = st_as_sf(zcta), fill=NA, color="grey50") +
+    #'   #   scale_color_continuous(name = "Concentration",
+    #'   #                          low="yellow", high="red") +
+    #'   #   theme(legend.position = "bottom") +
+    #'   #   simple_theme
+    #'   # ggsave(filename = "./Maps/For Report/CMAQ Receptors.jpeg",
+    #'   #        device = "jpeg", dpi = 300)
+    #'   
+    #'   #' scale exposures in order to avoid errors in kriging
+    #'   #' small values don't do well because issues with truncation!
+    #'   test_p_2@data[(metrics[j])] <- test_p_2@data[(metrics[j])] * exp_scale
+    #'   
+    #'   #' Create a smooth surface using ordinary kriging
+    #'   #'generate the semivariogram
+    #'   cmaq_vgm <- variogram(get(metrics[j]) ~ 1, test_p_2) 
+    #'   # plot(cmaq_vgm)
+    #'   
+    #'   #' Fitting the semivariogram
+    #'   cmaq_fit <- fit.variogram(cmaq_vgm, model=vgm(all_models)) 
+    #'   # plot(cmaq_vgm, cmaq_fit)
+    #'   
+    #'   #' Ordinary kriging using the fitted semivariogram
+    #'   #' Use 24 nearest points (important for ozone)
+    #'   cmaq_ok <- krige(get(metrics[j]) ~ 1, test_p_2, cmaq_g, cmaq_fit,
+    #'                    nmax = 24)
+    #' 
+    #'   # spplot(cmaq_ok, "var1.pred",
+    #'   #        main = paste("pol= ", pol_names[i], ", met= ", metrics[j],
+    #'   #                     ", day= ", days[k], sep=""))
+    #'   
+    #'   #' Plot for report
+    #'   # test_ok_sf <- st_as_sf(as(cmaq_ok, "SpatialPointsDataFrame"))
+    #'   # ggplot() +
+    #'   #   ggtitle("B: Kriged 1 km Point Estimates") +
+    #'   #   geom_sf(data = test_ok_sf, aes(color=var1.pred / exp_scale)) +
+    #'   #   geom_sf(data = st_as_sf(zcta), fill=NA, color="grey50") +
+    #'   #   scale_color_continuous(name = "Concentration",
+    #'   #                          low="yellow", high="red") +
+    #'   #   theme(legend.position = "bottom") +
+    #'   #   simple_theme
+    #'   # ggsave(filename = "./Maps/For Report/Kriged Receptors.jpeg",
+    #'   #        device = "jpeg", dpi = 300)
+    #'   
+    #'   #' Turn grid back into raster for zonal statistics
+    #'   #' Want to make sure the grid cells are in the same order as the
+    #'   #' population density raster when they get converted to a data frame
+    #'   cmaq_r <- raster(cmaq_ok)
+    #'   
+    #'   #' Zonal statistics using weights from the population-density raster
+    #'   cmaq_df <- as.data.frame(cmaq_r)
+    #'   cmaq_df$cell <- rownames(cmaq_df)
+    #'   
+    #'   #' Check! Data frame for kriging should match population density
+    #'   if (nrow(cmaq_df) != nrow(pop_den_df_1k)) stop()
+    #'   
+    #'   #' calculate weighted means and SD 
+    #'   #' Need to "unscale" exposure concentrations to get back to original units
+    #'   #' See just before the  for details ()
+    #'   #' (Hmisc) 
+    #'   zcta_conc <- merge(zcta_weights, cmaq_df, by="cell")
+    #'   zcta_conc <- rename(zcta_conc, conc = var1.pred) %>%
+    #'     arrange(id) %>%
+    #'     mutate(conc = conc / exp_scale)
+    #' 
+    #'   #' Calculate weighted averages at the ZCTA level
+    #'   #' New weight-- population density * the fraction of the polygon covered 
+    #'   #' by the cell
+    #' 
+    #'   zcta_cmaq <- zcta_conc %>%
+    #'     mutate(wt_prod = pop_density * weight) %>%
+    #'     group_by(id) %>%
+    #'     summarise(wt_conc = wtd.mean(x = conc, weights = wt_prod),
+    #'               wt_conc_sd = sqrt(wtd.var(x = conc, weights = wt_prod))) %>% 
+    #'     left_join(zcta_key, by="id")
+    #'   head(zcta_cmaq)
+    #'   summary(zcta_cmaq)
+    #'   
+    #'   #' Plot for report
+    #'   # test_zcta_sf <- st_as_sf(zcta) %>%
+    #'   #   select(GEOID10) %>%
+    #'   #   left_join(zcta_cmaq, by="GEOID10")
+    #'   # ggplot() +
+    #'   #   ggtitle("C: Population-weighted ZCTA Concentrations") +
+    #'   #   geom_sf(data = test_zcta_sf, aes(fill=wt_conc)) +
+    #'   #   geom_sf(data = st_as_sf(zcta), fill=NA, color="grey50") +
+    #'   #   scale_fill_continuous(name = "Concentration",
+    #'   #                          low="yellow", high="red") +
+    #'   #   theme(legend.position = "bottom") +
+    #'   #   simple_theme
+    #'   # ggsave(filename = "./Maps/For Report/ZCTA Concentrations.jpeg",
+    #'   #        device = "jpeg", dpi = 300)
+    #'   
+    #'   #' Plot exposure concentration
+    #'   #zcta_1 <- merge(zcta, zcta_cmaq, by="GEOID10")
+    #'   #zcta_within_1 <- merge(zcta_within, zcta_cmaq, by="GEOID10")
+    #'   #spplot(zcta_1, "wt_conc",
+    #'   #       main="Predicted monthly average PM2.5\n(ZCTA level using zonal statistics)")
+    #'   
+    #'   #spplot(zcta_within_1, "wt_conc",
+    #'   #       main="Predicted monthly average PM2.5\n(ZCTAs completely within the modeling domain)")
+    #'   
+    #'   #' add indicators for pollutant, metric, and day
+    #'   zcta_cmaq$pol <- pol_names[i]
+    #'   zcta_cmaq$metric <- metrics[j]
+    #'   zcta_cmaq$day <- days[k]
+    #'   
+    #'   met_df <- rbind(met_df, zcta_cmaq)
+    #'   rm(zcta_conc, zcta_cmaq)
+    #' }
   
-  rm(met_df)
+    zcta_list[[j]] <- met_df
+    names(zcta_list)[length(zcta_list)] <- metrics[j]
+  
+    rm(met_df)
   }
   save(zcta_list,
        file=paste("./HIA Inputs/", pre[s], pol_names[i], "_zcta_metrics.RData",

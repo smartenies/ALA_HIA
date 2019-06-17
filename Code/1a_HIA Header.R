@@ -20,6 +20,8 @@ library(viridis)
 library(DescTools)
 library(IC2)
 library(metafor)
+library(foreach)
+library(doParallel)
 
 #' For ggplots
 simple_theme <- theme(
@@ -50,10 +52,10 @@ albers <- "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 
 #' -----------------------------------------------------------------------------
  
 #' Unique prefixes for each run
-pre <- c("HIA_Winter_AllCO_",
-         "HIA_Summer_AllCO_",
-         "HIA_CF_BL_Winter_AllCO_",
-         "HIA_CF_BL_Summer_AllCO_")
+pre <- c("HIA_CF_BL_Winter_AllCO_",
+         "HIA_CF_BL_Summer_AllCO_",
+         "HIA_Winter_AllCO_",
+         "HIA_Summer_AllCO_")
 
 # pre <- c("BoD_Winter_",
 #          "BoD_Summer_",
@@ -78,10 +80,10 @@ pre <- c("HIA_Winter_AllCO_",
 #'     "Scenario" gets substracted from the baseline case
 #'     If just doing total burden, set cmaq_scenario to NA
 
-cmaq_baseline <- c("southern_colorado_2011018_2011052.nc",
-                   "southern_colorado_2011196_2011230.nc",
-                   "southern_colorado_2017018_2017052.nc",
-                   "southern_colorado_2017196_2017230.nc")
+cmaq_baseline <- c("colorado_winter_2017_18.52.nc",
+                   "colorado_summer_2017_196.230.nc",
+                   "colorado_winter_2011_18.52.nc",
+                   "colorado_summer_2011_196.230.nc")
 
 # cmaq_baseline <- c("southern_colorado_2011018_2011052.nc",
 #                    "southern_colorado_2011196_2011230.nc",
@@ -100,10 +102,10 @@ cmaq_baseline <- c("southern_colorado_2011018_2011052.nc",
 #                    "southern_colorado_2011018_2011052.nc",
 #                    "southern_colorado_2011196_2011230.nc")
 
-cmaq_scenario <- c("southern_colorado_2035018_2035052.nc",
-                   "southern_colorado_2035196_2035230.nc",
-                   "southern_colorado_2035018_2035052.nc",
-                   "southern_colorado_2035196_2035230.nc")
+cmaq_scenario <- c("colorado_winter_2035_18.52.nc",
+                   "colorado_summer_2035_196.230.nc",
+                   "colorado_winter_2035_18.52.nc",
+                   "colorado_summer_2035_196.230.nc")
 
 # cmaq_scenario <- c(NA, 
 #                    NA,

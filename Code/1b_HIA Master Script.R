@@ -16,30 +16,30 @@
 #' BEFORE RUNNING THIS CODE, SET THE ANALYSIS UP IN THE HEADER
 #' -----------------------------------------------------------------------------
 
-source("0_HIA Header.R")
+source("./Code/1a_HIA Header.R")
 
-#' Get the ZCTAs in order
-source("2_HIA Spatial Databases.R")
-
-#' Pool the CRs
-#' Only need to run once, but it doesn't hurt to keep it
-source("2_HIA CR Pooling.R")
-
-#' summarize population estimates
-#' Again, only need to run once, but it doesn't change anything to run again
-source("2_Population Estimates.R")
-
-#' Compile the HIA databases
-#' Same as above
-source("2_HIA Databases.R")
+#' #' Get the ZCTAs in order
+#' source("./Code/2_HIA Spatial Databases.R")
+#' 
+#' #' Pool the CRs
+#' #' Only need to run once, but it doesn't hurt to keep it
+#' source("./Code/2_HIA CR Pooling.R")
+#' 
+#' #' summarize population estimates
+#' #' Again, only need to run once, but it doesn't change anything to run again
+#' source("./Code/2_Population Estimates.R")
+#' 
+#' #' Compile the HIA databases
+#' #' Same as above
+#' source("./Code/2_HIA Databases.R")
 
 #' Loop through each step in the HIA
 start <- Sys.time()
 
-for (s in 11:length(pre)) {
+for (s in 1:length(pre)) {
   #' Assess exposures at the ZCTA level
   print(s)
-  source("3_HIA Exp Assessment.R")
+  source("./Code/3_HIA Exp Assessment.R")
 }
 
 gc()
@@ -47,16 +47,16 @@ gc()
 for (s in 1:length(pre)) {
   #' Run the MC analysis
   print(s)
-  source("4_HIA Monte Carlo.R")
+  source("./Code/4_HIA Monte Carlo.R")
 }
 
 gc()
 
-for (s in 1:length(pre)) {
-  #' Summary of Exposures, Health Benefits, and Inequality Analysis
-  if(s %% 2 == 0) next
-  source("5_HIA Summary.R")
-}
+#' for (s in 1:length(pre)) {
+#'   #' Summary of Exposures, Health Benefits, and Inequality Analysis
+#'   if(s %% 2 == 0) next
+#'   source("5_HIA Summary.R")
+#' }
 
 runtime <- Sys.time() - start
 
