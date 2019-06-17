@@ -417,14 +417,12 @@ all_models <- c("Sph", "Exp", "Gau", "Wav", "Exc",
                 "Ste", "Bes", "Mat", "Cir", "Pen")
 
 #' run in parallel
-
+load(paste("./HIA Inputs/", pre[s], "zcta_weights.RData", sep=""))
 for (i in 1:length(pol_names)) {
 
   #' read in data
   load(paste("./HIA Inputs/", pre[s], pol_names[i], "_receptor_metrics.RData", 
              sep=""))
-  
-  load(paste("./HIA Inputs/", pre[s], "zcta_weights.RData", sep=""))
   
   metrics <- names(exp_list)
   metrics
@@ -448,7 +446,7 @@ for (i in 1:length(pol_names)) {
     days <- sort(as.integer(unique(test_p$day)))
     
     #' run in parallel
-    cl <- makeCluster(3)
+    cl <- makeCluster(4)
     registerDoParallel(cl)
     
     met_df <- foreach(k=1:length(days), .combine = rbind,

@@ -25,20 +25,20 @@ library(doParallel)
 
 #' For ggplots
 simple_theme <- theme(
-    text  = element_text(family="Calibri",size = 15, color = 'black'),
-    panel.spacing.y = unit(0,"cm"),
-    panel.spacing.x = unit(0.25, "lines"),
-    panel.grid.minor = element_line(color="transparent"),
-    panel.grid.major = element_line(colour="transparent"),
-    panel.border=element_rect(fill = NA),
-    panel.background=element_blank(),
-    axis.ticks = element_line(colour = "black"),
-    axis.text = element_text(color = "black", size=10),
-    #legend.position = c(0.1,0.1),
-    plot.margin=grid::unit(c(0,0,0,0), "mm"),
-    legend.key = element_blank()
-    )
- 
+  text  = element_text(family="Calibri",size = 15, color = 'black'),
+  panel.spacing.y = unit(0,"cm"),
+  panel.spacing.x = unit(0.25, "lines"),
+  panel.grid.minor = element_line(color="transparent"),
+  panel.grid.major = element_line(colour="transparent"),
+  panel.border=element_rect(fill = NA),
+  panel.background=element_blank(),
+  axis.ticks = element_line(colour = "black"),
+  axis.text = element_text(color = "black", size=10),
+  #legend.position = c(0.1,0.1),
+  plot.margin=grid::unit(c(0,0,0,0), "mm"),
+  legend.key = element_blank()
+)
+
 windowsFonts(Calibri=windowsFont("TT Calibri"))
 options(scipen = 9999) #avoid scientific notation
 
@@ -50,7 +50,7 @@ albers <- "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 
 #' -----------------------------------------------------------------------------
 #' Designate the path, input, and output names for this run 
 #' -----------------------------------------------------------------------------
- 
+
 #' Unique prefixes for each run
 pre <- c("HIA_CF_BL_Winter_AllCO_",
          "HIA_CF_BL_Summer_AllCO_",
@@ -176,7 +176,7 @@ end_dates <- c(as.Date("02-21-2011", format="%m-%d-%Y"),
 
 #' Which year should we use for the population density? 2010 or 2015
 pop_den_tif <- "2010-COloradoPopDensity.tif"
-  
+
 #' exposure scale factor to avoid errors in kriging
 #' The variogram fitting step doesn't do well with small numbers
 #' due to truncation issues
