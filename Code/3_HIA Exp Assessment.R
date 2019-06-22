@@ -678,5 +678,5 @@ for (i in 1:length(pol_names)) {
 
 #' Clean up environment
 rm(zcta_list, cmaq_fit, cmaq_vgm, test_df, wt_check, cmaq_bound,
-   cmaq_g, cmaq_e, cmaq_ok, cmaq_p, cmaq_r, co_zcta, exp_list, i, j, k, 
+   cmaq_g, cmaq_e, cmaq_p, cmaq_r, co_zcta, i, 
    pop_den_e, pop_den_r_1k, pop_den_res, pop_den_t)
