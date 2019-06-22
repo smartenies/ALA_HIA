@@ -22,6 +22,7 @@ library(IC2)
 library(metafor)
 library(foreach)
 library(doParallel)
+library(snow)
 
 #' For ggplots
 simple_theme <- theme(
