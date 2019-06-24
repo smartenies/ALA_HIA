@@ -287,7 +287,7 @@ for (i in 1:length(baseline)) {
   }
   
   #' Clean up environment
-  rm(df, df_name, rec, a, b, avg_list, date_seq,
+  rm(df, df_name, rec, a, b, avg_list, 
      day_list, days, hours, i, j, k, l, max)
 }
 
