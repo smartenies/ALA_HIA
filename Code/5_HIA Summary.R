@@ -44,31 +44,31 @@ sfr_zips <-  c("80938", "80939", "80951", "81001", "81003", "81004", "81005",
                "80831", "80832", "80833", "80835", "80840", "80860")
 
 #' For the report!!
-#' What is the area of the receptor grid?
-load(paste("./HIA Inputs/", pre[s], "cmaq_spatial.RData", sep=""))
-cmaq_bound <- gConvexHull(cmaq_p)
-cmaq_bound <- st_as_sf(cmaq_bound) %>% 
-  st_transform(albers)
-plot(st_geometry(cmaq_bound))
-as.numeric(st_area(cmaq_bound)) / (1000**2) # area in km^2
-
+#' #' What is the area of the receptor grid?
+#' load(paste("./HIA Inputs/", pre[s], "cmaq_spatial.RData", sep=""))
+#' cmaq_bound <- gConvexHull(cmaq_p)
+#' cmaq_bound <- st_as_sf(cmaq_bound) %>% 
+#'   st_transform(albers)
+#' plot(st_geometry(cmaq_bound))
+#' as.numeric(st_area(cmaq_bound)) / (1000**2) # area in km^2
+ 
 load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
-zcta_sf <- st_as_sf(zcta) %>% 
-  st_transform(albers) %>%
+zcta_sf <- st_as_sf(zcta) %>%
+  st_transform(albers) %>% 
+  mutate(area = st_area(.) / (1000**2))
+summary(zcta_sf$area)
+
+zcta_area <- zcta_sf %>% 
   st_union()
-plot(st_geometry(zcta_sf))
-as.numeric(st_area(zcta_sf)) / (1000**2) # area in km^2
+plot(st_geometry(zcta_area))
+as.numeric(st_area(zcta_area)) / (1000**2) # area in km^2
 
 #' How many people live in the study area?
 zcta_ids <- unique(zcta@data$GEOID10)
 pop <- read.table(pop_file, header=T, stringsAsFactors = F) 
 sum(pop$total) #' all zip codes
+summary(pop$total)
 
-zcta_pop <- pop %>%
-  filter(GEOID %in% zcta_ids) %>%
-  select(GEOID, total) %>%
-  summarize(total_pop = sum(total))
-zcta_pop #' ZIP codes in the study area
 
 # For posterity, summarize CMAQ receptor concentrations----
 rec_summary <- data.frame()
@@ -131,50 +131,76 @@ for (i in 1:length(pol_names)) {
   metrics <- names(zcta_list)
   
   for (j in 1:length(metrics)) {
-    exp_df <- zcta_list[[j]]
+    exp_df <- zcta_list[[j]] %>% 
+      mutate(wt_conc = wt_conc * -1,
+             wt_conc_sd = wt_conc_sd * -1)
     
     temp <- data.frame(pol = pol_names[i],
                        zctas = "all",
                        season = pre[s],
                        metric = metrics[j],
-                       mean = mean(exp_df$wt_conc, na.rm=T),
-                       sd = sd(exp_df$wt_conc, na.rm=T),
-                       min = min(exp_df$wt_conc, na.rm=T),
-                       median = median(exp_df$wt_conc, na.rm=T),
-                       max = max(exp_df$wt_conc, na.rm=T))
+                       mean_sd = paste0(round(mean(exp_df$wt_conc, na.rm=T),3),
+                                        " (", round(sd(exp_df$wt_conc, na.rm=T), 3),
+                                        ")"),
+                       min = round(min(exp_df$wt_conc, na.rm=T), 3),
+                       median = round(median(exp_df$wt_conc, na.rm=T), 3),
+                       max = round(max(exp_df$wt_conc, na.rm=T), 3))
     exp_summary <- bind_rows(exp_summary, temp)
     rm(temp)
     
     exp_df2 <- zcta_list[[j]] %>% 
-      filter(GEOID10 %in% springs_zips)
+      filter(GEOID10 %in% springs_zips) %>% 
+      mutate(wt_conc = wt_conc * -1,
+             wt_conc_sd = wt_conc_sd * -1)
     
     temp <- data.frame(pol = pol_names[i],
                        zctas = "springs",
                        season = pre[s],
                        metric = metrics[j],
-                       mean = mean(exp_df2$wt_conc, na.rm=T),
-                       sd = sd(exp_df2$wt_conc, na.rm=T),
-                       min = min(exp_df2$wt_conc, na.rm=T),
-                       median = median(exp_df2$wt_conc, na.rm=T),
-                       max = max(exp_df2$wt_conc, na.rm=T))
+                       mean_sd = paste0(round(mean(exp_df2$wt_conc, na.rm=T),3),
+                                        " (", round(sd(exp_df2$wt_conc, na.rm=T), 3),
+                                        ")"),
+                       min = round(min(exp_df2$wt_conc, na.rm=T), 3),
+                       median = round(median(exp_df2$wt_conc, na.rm=T), 3),
+                       max = round(max(exp_df2$wt_conc, na.rm=T), 3))
     exp_summary <- bind_rows(exp_summary, temp)
     rm(temp)
     
     exp_df3 <- zcta_list[[j]] %>% 
-      filter(GEOID10 %in% pueblo_zips)
+      filter(GEOID10 %in% pueblo_zips) %>% 
+      mutate(wt_conc = wt_conc * -1,
+             wt_conc_sd = wt_conc_sd * -1)
     
     temp <- data.frame(pol = pol_names[i],
                        zctas = "pueblo",
                        season = pre[s],
                        metric = metrics[j],
-                       mean = mean(exp_df3$wt_conc, na.rm=T),
-                       sd = sd(exp_df3$wt_conc, na.rm=T),
-                       min = min(exp_df3$wt_conc, na.rm=T),
-                       median = median(exp_df3$wt_conc, na.rm=T),
-                       max = max(exp_df3$wt_conc, na.rm=T))
+                       mean_sd = paste0(round(mean(exp_df3$wt_conc, na.rm=T), 3),
+                                        " (", round(sd(exp_df3$wt_conc, na.rm=T), 3),
+                                        ")"),
+                       min = round(min(exp_df3$wt_conc, na.rm=T), 3),
+                       median = round(median(exp_df3$wt_conc, na.rm=T), 3),
+                       max = round(max(exp_df3$wt_conc, na.rm=T), 3))
     exp_summary <- bind_rows(exp_summary, temp)
     rm(temp)
     
+    exp_df4 <- zcta_list[[j]] %>% 
+      filter(GEOID10 %in% sfr_zips) %>% 
+      mutate(wt_conc = wt_conc * -1,
+             wt_conc_sd = wt_conc_sd * -1)
+    
+    temp <- data.frame(pol = pol_names[i],
+                       zctas = "sfr",
+                       season = pre[s+1],
+                       metric = metrics[j],
+                       mean_sd = paste0(round(mean(exp_df4$wt_conc, na.rm=T), 3),
+                                        " (", round(sd(exp_df4$wt_conc, na.rm=T), 3),
+                                        ")"),
+                       min = round(min(exp_df4$wt_conc, na.rm=T), 3),
+                       median = round(median(exp_df4$wt_conc, na.rm=T), 3),
+                       max = round(max(exp_df4$wt_conc, na.rm=T), 3))
+    exp_summary <- bind_rows(exp_summary, temp)
+    rm(temp)
   }
   
   load(paste("./HIA Inputs/", pre[s+1], 
@@ -183,51 +209,78 @@ for (i in 1:length(pol_names)) {
   metrics <- names(zcta_list)
   
   for (j in 1:length(metrics)) {
-    exp_df <- zcta_list[[j]]
+    exp_df <- zcta_list[[j]] %>% 
+      mutate(wt_conc = wt_conc * -1,
+             wt_conc_sd = wt_conc_sd * -1)
     
     temp <- data.frame(pol = pol_names[i],
                        zctas = "all",
                        season = pre[s+1],
                        metric = metrics[j],
-                       mean = mean(exp_df$wt_conc, na.rm=T),
-                       sd = sd(exp_df$wt_conc, na.rm=T),
-                       min = min(exp_df$wt_conc, na.rm=T),
-                       median = median(exp_df$wt_conc, na.rm=T),
-                       max = max(exp_df$wt_conc, na.rm=T))
+                       mean_sd = paste0(round(mean(exp_df$wt_conc, na.rm=T), 3),
+                                       " (", round(sd(exp_df$wt_conc, na.rm=T), 3),
+                                       ")"),
+                       min = round(min(exp_df$wt_conc, na.rm=T), 3),
+                       median = round(median(exp_df$wt_conc, na.rm=T), 3),
+                       max = round(max(exp_df$wt_conc, na.rm=T), 3))
     exp_summary <- bind_rows(exp_summary, temp)
     rm(temp)
     
     exp_df2 <- zcta_list[[j]] %>% 
-      filter(GEOID10 %in% springs_zips)
+      filter(GEOID10 %in% springs_zips) %>% 
+      mutate(wt_conc = wt_conc * -1,
+             wt_conc_sd = wt_conc_sd * -1)
     
     temp <- data.frame(pol = pol_names[i],
                        zctas = "springs",
                        season = pre[s+1],
                        metric = metrics[j],
-                       mean = mean(exp_df2$wt_conc, na.rm=T),
-                       sd = sd(exp_df2$wt_conc, na.rm=T),
-                       min = min(exp_df2$wt_conc, na.rm=T),
-                       median = median(exp_df2$wt_conc, na.rm=T),
-                       max = max(exp_df2$wt_conc, na.rm=T))
+                       mean_sd = paste0(round(mean(exp_df2$wt_conc, na.rm=T), 3),
+                                        " (", round(sd(exp_df2$wt_conc, na.rm=T), 3),
+                                        ")"),
+                       min = round(min(exp_df2$wt_conc, na.rm=T), 3),
+                       median = round(median(exp_df2$wt_conc, na.rm=T), 3),
+                       max = round(max(exp_df2$wt_conc, na.rm=T), 3))
     exp_summary <- bind_rows(exp_summary, temp)
     rm(temp)
     
     exp_df3 <- zcta_list[[j]] %>% 
-      filter(GEOID10 %in% pueblo_zips)
+      filter(GEOID10 %in% pueblo_zips) %>% 
+      mutate(wt_conc = wt_conc * -1,
+             wt_conc_sd = wt_conc_sd * -1)
     
     temp <- data.frame(pol = pol_names[i],
                        zctas = "pueblo",
                        season = pre[s+1],
                        metric = metrics[j],
-                       mean = mean(exp_df3$wt_conc, na.rm=T),
-                       sd = sd(exp_df3$wt_conc, na.rm=T),
-                       min = min(exp_df3$wt_conc, na.rm=T),
-                       median = median(exp_df3$wt_conc, na.rm=T),
-                       max = max(exp_df3$wt_conc, na.rm=T))
+                       mean_sd = paste0(round(mean(exp_df3$wt_conc, na.rm=T), 3),
+                                        " (", round(sd(exp_df3$wt_conc, na.rm=T), 3),
+                                        ")"),
+                       min = round(min(exp_df3$wt_conc, na.rm=T), 3),
+                       median = round(median(exp_df3$wt_conc, na.rm=T), 3),
+                       max = round(max(exp_df3$wt_conc, na.rm=T), 3))
+    exp_summary <- bind_rows(exp_summary, temp)
+    
+    exp_df4 <- zcta_list[[j]] %>% 
+      filter(GEOID10 %in% sfr_zips) %>% 
+      mutate(wt_conc = wt_conc * -1,
+             wt_conc_sd = wt_conc_sd * -1)
+    
+    temp <- data.frame(pol = pol_names[i],
+                       zctas = "sfr",
+                       season = pre[s+1],
+                       metric = metrics[j],
+                       mean_sd = paste0(round(mean(exp_df4$wt_conc, na.rm=T), 3),
+                                        " (", round(sd(exp_df4$wt_conc, na.rm=T), 3),
+                                        ")"),
+                       min = round(min(exp_df4$wt_conc, na.rm=T), 3),
+                       median = round(median(exp_df4$wt_conc, na.rm=T), 3),
+                       max = round(max(exp_df4$wt_conc, na.rm=T), 3))
     exp_summary <- bind_rows(exp_summary, temp)
     rm(temp)
   }
 }
+
 
 write_xlsx(exp_summary,
            path=paste("./HIA Outputs/", pre[s], pre[s+1],
@@ -244,66 +297,66 @@ load("./Data/Spatial Data/power_plants.RData")
 pp <- st_transform(pp, crs = ll_wgs84)
 
 for (i in 1:length(pol_names)) {
-  
+
   #' Get ZCTA IDs for plot-- season 1
   load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
   zcta_ids <- unique(zcta$GEOID10)
   zcta_within_ids <- unique(zcta_within$GEOID10)
-  
+
   rm(zcta, zcta_within)
-  
+
   #' Read in change in "annual" concentration
-  load(paste("./HIA Inputs/", pre[s], 
+  load(paste("./HIA Inputs/", pre[s],
              pol_names[i], "_zcta_metrics.RData", sep=""))
-  
+
   mean_df <- zcta_list[["ann_mean"]]
-  
+
   #' Plot change in exposures
   load("./Data/Spatial Data/co_zcta.RData")
   zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
     select(GEOID10) %>%
     left_join(mean_df, by="GEOID10")
-  
+
   plot(st_geometry(zcta))
-  
+
   title_name <- ifelse(is.na(cmaq_scenario[s]), "", "Change in")
 
   ggplot(data=zcta) +
     ggtitle(paste(title_name, season_map[1], pol_map[i], unit_map[i])) +
     geom_sf(aes(fill=wt_conc)) +
     geom_sf(data = pp, color = "red") +
-    scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) + 
+    scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
     simple_theme
   ggsave(filename = paste("./HIA Outputs/Maps/", title_name, pre[s], pre[s+1],
                           season_map[1], "_", pol_map[i], ".jpeg", sep=""),
          device = "jpeg", dpi = 600)
-  
+
   #' Get ZCTA IDs for plot-- season 2
   load(paste("./HIA Inputs/", pre[s+1], "zcta.RData", sep=""))
   zcta_ids <- unique(zcta$GEOID10)
   zcta_within_ids <- unique(zcta_within$GEOID10)
-  
+
   rm(zcta, zcta_within)
-  
+
   #' Read in change in "annual" concentration
-  load(paste("./HIA Inputs/", pre[s+1], 
+  load(paste("./HIA Inputs/", pre[s+1],
              pol_names[i], "_zcta_metrics.RData", sep=""))
-  
+
   mean_df <- zcta_list[["ann_mean"]]
-  
+
   #' Plot change in exposures
   load("./Data/Spatial Data/co_zcta.RData")
   zcta <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
     select(GEOID10) %>%
     left_join(mean_df, by="GEOID10")
-  
+
   plot(st_geometry(zcta))
-  
+
   ggplot(data=zcta) +
     ggtitle(paste(title_name, season_map[2], pol_map[i], unit_map[i])) +
     geom_sf(aes(fill=wt_conc)) +
     geom_sf(data = pp, color = "red") +
-    scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) + 
+    scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
     simple_theme
   ggsave(filename = paste("./HIA Outputs/Maps/", title_name, pre[s], pre[s+1],
                           season_map[2], "_", pol_map[i], ".jpeg", sep=""),
@@ -314,14 +367,14 @@ for (i in 1:length(pol_names)) {
 
 load(paste("./HIA Outputs/", pre[s], "zcta_impacts.RData", sep=""))
 out_df_1 <- out_df
-  
+
 load(paste("./HIA Outputs/", pre[s+1], "zcta_impacts.RData", sep=""))
 out_df_2 <- out_df
-  
+
 rm(out_df)
-  
+
 combined_df <- bind_rows(out_df_1, out_df_2) %>%
-  mutate(zcta = as.character(zcta)) %>% 
+  mutate(zcta = as.character(zcta)) %>%
   group_by(zcta, pol, outcome) %>%
   summarise(median = sum(median, na.rm=T),
             p2.5 = sum(p2.5, na.rm=T),
@@ -332,7 +385,7 @@ combined_df <- bind_rows(out_df_1, out_df_2) %>%
             median_value = sum(median_value, na.rm=T),
             p2.5_value = sum(p2.5_value, na.rm=T),
             p97.5_value = sum(p97.5_value, na.rm=T))
-  
+
 #' Summarize impacts
 total_df <- combined_df %>%
   group_by(pol, outcome) %>%
@@ -345,10 +398,16 @@ total_df <- combined_df %>%
             p97.5_scaled = round(sum(p97.5_scaled, na.rm=T),0),
             median_value = round(sum(median_value, na.rm=T),0),
             p2.5_value = round(sum(p2.5_value, na.rm=T),0),
-            p97.5_value = round(sum(p97.5_value, na.rm=T),0))
+            p97.5_value = round(sum(p97.5_value, na.rm=T),0)) %>%
+  mutate(health_impacts = paste0(median_scaled, " (", p2.5_scaled, ",",
+                                 p97.5_scaled, ")"),
+         monetized_impacts = paste0(median_value, " (", p2.5_value, ",",
+                                 p97.5_value, ")"))
+total_df <- total_df[c(19,10,11,9,12,17,18,7,2,1,3,4,5),]
+
 
 total_df2 <- combined_df %>%
-  filter(zcta %in% springs_zips) %>% 
+  filter(zcta %in% springs_zips) %>%
   group_by(pol, outcome) %>%
   summarise(median = round(sum(median, na.rm=T),2),
             zctas = "springs",
@@ -359,10 +418,15 @@ total_df2 <- combined_df %>%
             p97.5_scaled = round(sum(p97.5_scaled, na.rm=T),0),
             median_value = round(sum(median_value, na.rm=T),0),
             p2.5_value = round(sum(p2.5_value, na.rm=T),0),
-            p97.5_value = round(sum(p97.5_value, na.rm=T),0))
+            p97.5_value = round(sum(p97.5_value, na.rm=T),0)) %>%
+  mutate(health_impacts = paste0(median_scaled, " (", p2.5_scaled, ", ",
+                                 p97.5_scaled, ")"),
+         monetized_impacts = paste0(median_value, " (", p2.5_value, ", ",
+                                    p97.5_value, ")"))
+total_df2 <- total_df2[c(19,10,11,9,12,17,18,7,2,1,3,4,5),]
 
 total_df3 <- combined_df %>%
-  filter(zcta %in% pueblo_zips) %>% 
+  filter(zcta %in% pueblo_zips) %>%
   group_by(pol, outcome) %>%
   summarise(median = round(sum(median, na.rm=T),2),
             zctas = "pueblo",
@@ -373,9 +437,33 @@ total_df3 <- combined_df %>%
             p97.5_scaled = round(sum(p97.5_scaled, na.rm=T),0),
             median_value = round(sum(median_value, na.rm=T),0),
             p2.5_value = round(sum(p2.5_value, na.rm=T),0),
-            p97.5_value = round(sum(p97.5_value, na.rm=T),0))
+            p97.5_value = round(sum(p97.5_value, na.rm=T),0)) %>%
+  mutate(health_impacts = paste0(median_scaled, " (", p2.5_scaled, ", ",
+                                 p97.5_scaled, ")"),
+         monetized_impacts = paste0(median_value, " (", p2.5_value, ", ",
+                                    p97.5_value, ")"))
+total_df3 <- total_df3[c(19,10,11,9,12,17,18,7,2,1,3,4,5),]
 
-total_df <- bind_rows(total_df, total_df2, total_df3)
+total_df4 <- combined_df %>%
+  filter(zcta %in% sfr_zips) %>%
+  group_by(pol, outcome) %>%
+  summarise(median = round(sum(median, na.rm=T),2),
+            zctas = "SFR",
+            p2.5 = round(sum(p2.5, na.rm=T),2),
+            p97.5 = round(sum(p97.5, na.rm=T),2),
+            median_scaled = round(sum(median_scaled, na.rm=T),0),
+            p2.5_scaled = round(sum(p2.5_scaled, na.rm=T),0),
+            p97.5_scaled = round(sum(p97.5_scaled, na.rm=T),0),
+            median_value = round(sum(median_value, na.rm=T),0),
+            p2.5_value = round(sum(p2.5_value, na.rm=T),0),
+            p97.5_value = round(sum(p97.5_value, na.rm=T),0)) %>%
+  mutate(health_impacts = paste0(median_scaled, " (", p2.5_scaled, ", ",
+                                 p97.5_scaled, ")"),
+         monetized_impacts = paste0(median_value, " (", p2.5_value, ", ",
+                                    p97.5_value, ")"))
+total_df4 <- total_df4[c(19,10,11,9,12,17,18,7,2,1,3,4,5),]
+
+total_df <- bind_rows(total_df, total_df2, total_df3, total_df4)
 
 save(out_df_1, out_df_2, combined_df, total_df,
      file = paste("./HIA Outputs/", pre[s], pre[s+1], "zcta_combined.RData",
@@ -389,13 +477,13 @@ write_xlsx(total_df,
 ses <- read.table(ses_file, header=T, stringsAsFactors = F) %>%
   mutate(GEOID = gsub("86000US", "", GEOID)) %>%
   dplyr::rename(zcta = GEOID) %>%
-  dplyr::select(zcta, total_pop, pct_poc, pct_nhw, med_income, 
+  dplyr::select(zcta, total_pop, pct_poc, pct_nhw, med_income,
                 pct_hs_grad, pct_employed, pct_hh_not_limited_eng)
 
 #' Clean up median impacts and calculate benefit rate
 impacts <- ungroup(combined_df) %>%
-  left_join(ses, by="zcta") %>% 
-  select(zcta, pol, outcome, median_scaled, total_pop) %>% 
+  left_join(ses, by="zcta") %>%
+  select(zcta, pol, outcome, median_scaled, total_pop) %>%
   mutate(pol = as.character(pol)) %>%
   mutate(rate = (median_scaled / total_pop) * rate_pop)
 
@@ -412,22 +500,22 @@ zcta_sf <- filter(co_zcta, GEOID10 %in% zcta_ids) %>%
 
 if(exists(paste("./HIA Outputs/Maps/", pre[s], pre[s+1], sep=""))==F) {
   dir.create(paste("./HIA Outputs/Maps/", pre[s], pre[s+1], sep=""))
-} 
+}
 
 for (i in 1:length(unique(zcta_sf$pol))) {
   zcta_pol <- zcta_sf %>%
     filter(pol == unique(zcta_sf$pol)[i])
-  
+
   outcomes <- unique(zcta_pol$outcome)
-  
+
   for (j in 1:length(outcomes)) {
     scale_name <- ifelse(is.na(cmaq_scenario[s]), "Impacts\nper",
                          "Avoided impacts\nper")
-    
+
     zcta_map <- zcta_pol %>%
       filter(outcome == outcomes[j]) %>%
       mutate(rate = ifelse(rate < 0, 0, rate))
-    
+
     ggplot(data = zcta_map) +
       ggtitle(paste("Attributable Outcome Rates:", out_dict[[outcomes[j]]])) +
       geom_sf(aes(fill = rate)) +
@@ -477,7 +565,7 @@ if(exists(paste("./HIA Outputs/CI Plots/", pre[s], pre[s+1], sep=""))==F) {
 
 for (i in 1:length(unique(impacts2$pol))) {
   zcta_pol <- impacts2 %>%
-    filter(pol == unique(zcta_sf$pol)[i])
+    filter(pol == unique(impacts2$pol)[i])
   
   outcomes <- unique(zcta_pol$outcome)
   for (j in 1:length(outcomes)) {
@@ -494,8 +582,37 @@ for (i in 1:length(unique(impacts2$pol))) {
       zcta_ses <- filter(zcta_map, ses_indic == ses_indicators[k])
       
       jpeg(filename = paste("./HIA Outputs/CI Plots/", pre[s], pre[s+1], "/", 
-                            unique(zcta_sf$pol)[i], "_", outcomes[j], "_",
+                            unique(impacts2$pol)[i], "_", outcomes[j], "_",
                             ses_indicators[k], ".jpeg", sep=""))
+      curveConcent(zcta_ses$rate, zcta_ses$ses_value, col="red",
+                   xlab = paste("Ranking by", ses_dict[[ses_indicators[k]]]),
+                   ylab = paste(y_lab, out_dict[[outcomes[j]]]))
+      dev.off()
+    }
+  }
+  
+  #' repeat just for SFR zctas
+  zcta_pol <- impacts2 %>%
+    filter(zcta %in% sfr_zips) %>% 
+    filter(pol == unique(impacts2$pol)[i])
+  
+  outcomes <- unique(zcta_pol$outcome)
+  for (j in 1:length(outcomes)) {
+    zcta_map <- zcta_pol %>%
+      filter(outcome == outcomes[j]) %>%
+      mutate(rate = ifelse(rate < 0, 0, rate))
+    
+    ses_indicators <- unique(zcta_map$ses_indic)
+    
+    for (k in 1:length(ses_indicators)) {
+      y_lab <- ifelse(is.na(cmaq_scenario[s]), "Health impact rate:",
+                      "Health benefit rate:")
+      
+      zcta_ses <- filter(zcta_map, ses_indic == ses_indicators[k])
+      
+      jpeg(filename = paste("./HIA Outputs/CI Plots/", pre[s], pre[s+1], "/", 
+                            "SFR_", unique(impacts2$pol)[i], "_", outcomes[j], 
+                            "_", ses_indicators[k], ".jpeg", sep=""))
       curveConcent(zcta_ses$rate, zcta_ses$ses_value, col="red",
                    xlab = paste("Ranking by", ses_dict[[ses_indicators[k]]]),
                    ylab = paste(y_lab, out_dict[[outcomes[j]]]))
@@ -518,12 +635,4 @@ save(inequality,
 write_xlsx(inequality,
            path=paste("./HIA Outputs/", pre[s], pre[s+1], "zcta_inequality_benefits.xlsx",sep=""))  
 
-#' Map the median income and percentage of the population that is POC 
-
-#' Get ZCTA IDs for plot-- season 1
-load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
-zcta_ids <- unique(zcta$GEOID10)
-zcta_within_ids <- unique(zcta_within$GEOID10)
-
-rm(zcta, zcta_within)
 
