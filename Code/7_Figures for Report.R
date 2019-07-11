@@ -29,7 +29,7 @@ library(writexl)
 library(viridis)
 
 #' Google API for ggmap
-google_api_key <- "change_key_here"
+google_api_key <- "replace_key_here"
 register_google(key = google_api_key)
 
 #' For ggplots
@@ -53,7 +53,7 @@ options(scipen = 9999) #avoid scientific notation
 
 map_theme <- theme(
   #aspect.ratio = 1,
-  text  = element_text(family="Calibri",size = 12, color = 'black'),
+  text  = element_text(family="Calibri",size = 10, color = 'black'),
   panel.spacing.y = unit(0,"cm"),
   panel.spacing.x = unit(0.25, "lines"),
   panel.grid.major = element_line(colour = "transparent"),
@@ -95,26 +95,13 @@ ll_wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 #' -----------------------------------------------------------------------------
 #' "prefixes"
-#' For paper, need 7-10
 #' -----------------------------------------------------------------------------
 
 #' Unique prefixes for each run
-pre <- c("BoD_Winter_", 
-         "BoD_Summer_",
-         "BoD_Winter_2017_", 
-         "BoD_Summer_2017_",
-         "BoD_Winter_2035_", 
-         "BoD_Summer_2035_",
-         "HIA_Winter_",
-         "HIA_Summer_",
-         "HIA_CF_Baseline_Winter_",
-         "HIA_CF_Baseline_Summer_",
-         "HIA_MD_BL2011_CMCH_Off_Winter",
-         "HIA_MD_BL2011_CMCH_Off_Summer",
-         "HIA_MD_BL2017_CMCH_Off_Winter",
-         "HIA_MD_BL2017_CMCH_Off_Summer",
-         "HIA_MD_Off_CMCH_BL2011_Winter",
-         "HIA_MD_Off_CMCH_BL2011_Summer")
+pre <- c("HIA_CF_BL_Winter_AllCO_",
+         "HIA_CF_BL_Summer_AllCO_",
+         "HIA_Winter_AllCO_",
+         "HIA_Summer_AllCO_")
 
 #' -----------------------------------------------------------------------------
 #' Study Area Map
@@ -163,6 +150,9 @@ cmaq_envelop <- st_convex_hull(st_union(cmaq_sf))
 
 base_map <- get_map(location = "Colorado Springs, Colorado", zoom = 7)
 ggmap(base_map)
+
+base_map2 <- get_map(location = "Montrose, Colorado", zoom = 7)
+ggmap(base_map2)
 
 ggmap(base_map, darken = c(0.45, "white")) +
   geom_sf(data = zcta_union, aes(color = "zcta", fill="zcta"), size = 0.5,
@@ -228,7 +218,7 @@ pp <- st_transform(pp, crs = ll_wgs84)
 load("./Data/Spatial Data/co_zcta.RData")
 
 #' PM2.5, Winter
-s <- 7
+s <- 1
 i <- 1
 
 load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
@@ -254,34 +244,30 @@ plot(pm_winter_zcta["wt_conc"])
 pm_winter <- ggplot() +
   geom_sf(data = pm_winter_zcta, aes(fill = wt_conc), inherit.aes = F,
           color = NA) +
-  # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
-  #         show.legend = "point") +
-  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
-                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+
+  geom_text_repel(data = pp, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = -2,
                   colour = "red", segment.colour = "red", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
-  # scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
   scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
-                     breaks = c(max(pm_summer_zcta$wt_conc), -0.04, -0.08, -0.12),
-                     labels = c("0.0", "-0.04", "-0.08", "-0.1")) +
+                     breaks = c(max(pm_winter_zcta$wt_conc),-0.02, -0.04, -0.06, -0.08),
+                     labels = c("0.0", "-0.02", "-0.04", "-0.06", "-0.08")) +
   map_theme +
-  theme(legend.position = c(0.8, 0.8),
+  theme(legend.position = "right",
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
   xlab("") + ylab("") +
-  coord_sf(ylim = c(36.8, 40.5), 
-           xlim = c(-106.5, -102)) +
-  north(x.min = -106.5, x.max = -102,
-        y.min =  36.8, y.max = 40.5,
+  north(x.min = -109, x.max = -102,
+        y.min =  37, y.max = 41,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -102.75, y = 37.25)) +
-  scalebar(x.min = -106.5, x.max = -102,
-           y.min =  36.8, y.max = 40.5,
-           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+        anchor = c(x = -102.75, y = 36.75)) +
+  scalebar(x.min = -109, x.max = -102,
+           y.min =  37, y.max = 41,
+           dist = 100, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 36.3), st.dist = 0.04)
 pm_winter
 
 #' PM2.5, Summer
-s <- 8
+s <- 2
 i <- 1
 
 load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
@@ -308,32 +294,30 @@ pm_summer <- ggplot() +
           color = NA) +
   # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
   #         show.legend = "point") +
-  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
-                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+  geom_text_repel(data = pp, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = -2,
                   colour = "red", segment.colour = "red", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
   # scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
   scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
-                     breaks = c(max(pm_summer_zcta$wt_conc), -0.1, -0.2, -0.3, -0.4),
-                     labels = c("0.0", "-0.1", "-0.2", "-0.3", "-0.4")) +
+                     breaks = c(max(pm_summer_zcta$wt_conc), -0.02, -0.04, -0.06, -0.08),
+                     labels = c("0.0", "-0.02", "-0.04", "-0.06", "-0.08")) +
   map_theme +
-  theme(legend.position = c(0.8, 0.8),
+  theme(legend.position = "right",
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
   xlab("") + ylab("") +
-  coord_sf(ylim = c(36.8, 40.5), 
-           xlim = c(-106.5, -102)) +
-  north(x.min = -106.5, x.max = -102,
-        y.min =  36.8, y.max = 40.5,
+  north(x.min = -109, x.max = -102,
+        y.min =  37, y.max = 41,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -102.75, y = 37.25)) +
-  scalebar(x.min = -106.5, x.max = -102,
-           y.min =  36.8, y.max = 40.5,
-           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+        anchor = c(x = -102.75, y = 36.75)) +
+  scalebar(x.min = -109, x.max = -102,
+           y.min =  37, y.max = 41,
+           dist = 100, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 36.3), st.dist = 0.04)
 pm_summer
 
 #' ozone, Winter
-s <- 7
+s <- 1
 i <- 2
 
 load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
@@ -360,31 +344,29 @@ o3_winter <- ggplot() +
           color = NA) +
   # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
   #         show.legend = "point") +
-  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
-                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
-                  colour = "red", segment.colour = "red", segment.size = 0.3,
+  geom_text_repel(data = pp, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = -2,
+                  colour = "white", segment.colour = "white", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
-                     breaks = c(min(o3_winter_zcta$wt_conc), 0.1, 0.2, 0.3, 0.4),
-                     labels = c("0.0", "0.1", "0.2", "0.3", "0.4")) + 
+                     breaks = c(min(o3_winter_zcta$wt_conc), 0.05, 0.1, 0.15, 0.2),
+                     labels = c("0.0", "0.05", "0.1", "0.15", "0.2")) + 
   map_theme +
-  theme(legend.position = c(0.8, 0.8),
+  theme(legend.position = "right",
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
   xlab("") + ylab("") +
-  coord_sf(ylim = c(36.8, 40.5), 
-           xlim = c(-106.5, -102)) +
-  north(x.min = -106.5, x.max = -102,
-        y.min =  36.8, y.max = 40.5,
+  north(x.min = -109, x.max = -102,
+        y.min =  37, y.max = 41,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -102.75, y = 37.25)) +
-  scalebar(x.min = -106.5, x.max = -102,
-           y.min =  36.8, y.max = 40.5,
-           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+        anchor = c(x = -102.75, y = 36.75)) +
+  scalebar(x.min = -109, x.max = -102,
+           y.min =  37, y.max = 41,
+           dist = 100, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 36.3), st.dist = 0.04)
 o3_winter
 
 #' O3, Summer
-s <- 8
+s <- 1
 i <- 2
 
 load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
@@ -411,27 +393,25 @@ o3_summer <- ggplot() +
           color = NA) +
   # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
   #         show.legend = "point") +
-  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
-                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
-                  colour = "red", segment.colour = "red", segment.size = 0.3,
+  geom_text_repel(data = pp, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = -2,
+                  colour = "white", segment.colour = "white", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
-                     breaks = c(0, 0.25, 0.50, 0.75),
-                     labels = c("0.0", "0.2", "0.5", "0.8")) + 
+                     breaks = c(0, 0.05, 0.10, 0.15, 0.20),
+                     labels = c("0.0", "0.01", "0.01", "0.15", "0.20")) + 
   map_theme +
-  theme(legend.position = c(0.8, 0.8),
+  theme(legend.position = "right",
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
   xlab("") + ylab("") +
-  coord_sf(ylim = c(36.8, 40.5), 
-           xlim = c(-106.5, -102)) +
-  north(x.min = -106.5, x.max = -102,
-        y.min =  36.8, y.max = 40.5,
+  north(x.min = -109, x.max = -102,
+        y.min =  37, y.max = 41,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -102.75, y = 37.25)) +
-  scalebar(x.min = -106.5, x.max = -102,
-           y.min =  36.8, y.max = 40.5,
-           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+        anchor = c(x = -102.75, y = 36.75)) +
+  scalebar(x.min = -109, x.max = -102,
+           y.min =  37, y.max = 41,
+           dist = 100, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 36.3), st.dist = 0.04)
 o3_summer
 
 
@@ -444,7 +424,7 @@ hs1_maps_summer <- ggarrange(pm_summer, o3_summer,
 hs1_maps_summer
 ggsave(hs1_maps_summer,
        filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/HS1_Summer_Change_in_Exposure.jpeg", 
-       device = "jpeg", dpi=500, units = "in", height = 5, width = 7)
+       device = "jpeg", dpi=600, units = "in", height = 7, width = 10)
 
 hs1_maps_winter <- ggarrange(pm_winter, o3_winter, 
                              labels = c("A", "B"),
@@ -452,7 +432,7 @@ hs1_maps_winter <- ggarrange(pm_winter, o3_winter,
 hs1_maps_winter
 ggsave(hs1_maps_winter,
        filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/HS1_Winter_Change_in_Exposure.jpeg", 
-       device = "jpeg", dpi=500, units = "in", height = 5, width = 7)
+       device = "jpeg", dpi=500, units = "in", height = 7, width = 10)
 
 
 # Second, map change in exposure for HS2 ----
@@ -468,7 +448,7 @@ pp <- st_transform(pp, crs = ll_wgs84)
 load("./Data/Spatial Data/co_zcta.RData")
 
 #' PM2.5, Winter
-s <- 9
+s <- 3
 i <- 1
 
 load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
@@ -496,32 +476,30 @@ pm_winter <- ggplot() +
           color = NA) +
   # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
   #         show.legend = "point") +
-  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
-                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+  geom_text_repel(data = pp, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = - 2,
                   colour = "red", segment.colour = "red", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
   # scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
   scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
-                     breaks = c(0, -0.025, -0.050, -0.075),
-                     labels = c("0.0", "-0.02", "-0.05", "-0.08")) +
+                     breaks = c(0, -0.025, -0.05, -0.075, -0.1),
+                     labels = c("0.0", "-0.025", "-0.05", "-0.075", "-0.10")) +
   map_theme +
-  theme(legend.position = c(0.8, 0.8),
+  theme(legend.position = "right",
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
   xlab("") + ylab("") +
-  coord_sf(ylim = c(36.8, 40.5), 
-           xlim = c(-106.5, -102)) +
-  north(x.min = -106.5, x.max = -102,
-        y.min =  36.8, y.max = 40.5,
+  north(x.min = -109, x.max = -102,
+        y.min =  37, y.max = 41,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -102.75, y = 37.25)) +
-  scalebar(x.min = -106.5, x.max = -102,
-           y.min =  36.8, y.max = 40.5,
-           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+        anchor = c(x = -102.75, y = 36.75)) +
+  scalebar(x.min = -109, x.max = -102,
+           y.min =  37, y.max = 41,
+           dist = 100, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 36.3), st.dist = 0.04)
 pm_winter
 
 #' PM2.5, Summer
-s <- 10
+s <- 4
 i <- 1
 
 load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
@@ -548,32 +526,30 @@ pm_summer <- ggplot() +
           color = NA) +
   # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
   #         show.legend = "point") +
-  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
-                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
+  geom_text_repel(data = pp, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = -2,
                   colour = "red", segment.colour = "red", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
   # scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
   scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
-                     breaks = c(max(pm_summer_zcta$wt_conc), -0.025, -0.05, -0.075, -0.10, -0.125),
-                     labels = c("0.0", "-0.02", "-0.05", "-0.08",  "-0.10", "-0.13")) +
+                     breaks = c(max(pm_summer_zcta$wt_conc), -0.1, -0.2, -0.3),
+                     labels = c("0.0", "-0.1", "-0.2", "-0.3")) +
   map_theme +
-  theme(legend.position = c(0.8, 0.8),
+  theme(legend.position = "right",
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
   xlab("") + ylab("") +
-  coord_sf(ylim = c(36.8, 40.5), 
-           xlim = c(-106.5, -102)) +
-  north(x.min = -106.5, x.max = -102,
-        y.min =  36.8, y.max = 40.5,
+  north(x.min = -109, x.max = -102,
+        y.min =  37, y.max = 41,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -102.75, y = 37.25)) +
-  scalebar(x.min = -106.5, x.max = -102,
-           y.min =  36.8, y.max = 40.5,
-           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+        anchor = c(x = -102.75, y = 36.75)) +
+  scalebar(x.min = -109, x.max = -102,
+           y.min =  37, y.max = 41,
+           dist = 100, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 36.3), st.dist = 0.04)
 pm_summer
 
 #' ozone, Winter
-s <- 9
+s <- 3
 i <- 2
 
 load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
@@ -600,32 +576,30 @@ o3_winter <- ggplot() +
           color = NA) +
   # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
   #         show.legend = "point") +
-  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
-                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
-                  colour = "red", segment.colour = "red", segment.size = 0.3,
+  geom_text_repel(data = pp, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = -2,
+                  colour = "white", segment.colour = "white", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
   # scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
   scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
-                     breaks = c(min(o3_winter_zcta$wt_conc), 0.05, 0.1, 0.15),
-                     labels = c("0.0", "0.05", "0.1", "0.2")) +
+                     breaks = c(min(o3_winter_zcta$wt_conc), 0.1, 0.2, 0.3),
+                     labels = c("0.0", "0.1", "0.2", "0.3")) +
   map_theme +
-  theme(legend.position = c(0.8, 0.8),
+  theme(legend.position = "right",
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
   xlab("") + ylab("") +
-  coord_sf(ylim = c(36.8, 40.5), 
-           xlim = c(-106.5, -102)) +
-  north(x.min = -106.5, x.max = -102,
-        y.min =  36.8, y.max = 40.5,
+  north(x.min = -109, x.max = -102,
+        y.min =  37, y.max = 41,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -102.75, y = 37.25)) +
-  scalebar(x.min = -106.5, x.max = -102,
-           y.min =  36.8, y.max = 40.5,
-           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+        anchor = c(x = -102.75, y = 36.75)) +
+  scalebar(x.min = -109, x.max = -102,
+           y.min =  37, y.max = 41,
+           dist = 100, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 36.3), st.dist = 0.04)
 o3_winter
 
 #' O3, Summer
-s <- 10
+s <- 4
 i <- 2
 
 load(paste("./HIA Inputs/", pre[s], "zcta.RData", sep=""))
@@ -652,28 +626,26 @@ o3_summer <- ggplot() +
           color = NA) +
   # geom_sf(data = pp_sf, color="red", size = 0.5, inherit.aes = F, 
   #         show.legend = "point") +
-  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
-                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
-                  colour = "red", segment.colour = "red", segment.size = 0.3,
+  geom_text_repel(data = pp, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = - 2,
+                  colour = "white", segment.colour = "white", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
   # scale_fill_viridis(name = paste(pol_map[i], unit_map[i])) +
   scale_fill_viridis(name = paste(pol_map[i], unit_map[i]),
-                     breaks = c(min(o3_summer_zcta$wt_conc), 0.20, 0.40, 0.55),
-                     labels = c("0.0", "0.2", "0.4", "0.6")) +
+                     breaks = c(min(o3_summer_zcta$wt_conc), 0.20, 0.40, 0.6, 0.8),
+                     labels = c("0.0", "0.2", "0.4", "0.6", "0.8")) +
   map_theme +
-  theme(legend.position = c(0.8, 0.8),
+  theme(legend.position = "right",
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
   xlab("") + ylab("") +
-  coord_sf(ylim = c(36.8, 40.5), 
-           xlim = c(-106.5, -102)) +
-  north(x.min = -106.5, x.max = -102,
-        y.min =  36.8, y.max = 40.5,
+  north(x.min = -109, x.max = -102,
+        y.min =  37, y.max = 41,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -102.75, y = 37.25)) +
-  scalebar(x.min = -106.5, x.max = -102,
-           y.min =  36.8, y.max = 40.5,
-           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+        anchor = c(x = -102.75, y = 36.75)) +
+  scalebar(x.min = -109, x.max = -102,
+           y.min =  37, y.max = 41,
+           dist = 100, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 36.3), st.dist = 0.04)
 o3_summer
 
 
@@ -686,7 +658,7 @@ hs2_maps <- ggarrange(pm_summer, o3_summer, pm_winter, o3_winter,
 hs2_maps
 ggsave(hs2_maps,
        filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/HS2_Change_in_Exposure.jpeg", 
-       device = "jpeg", dpi=500, units = "in", height = 8, width = 7)
+       device = "jpeg", dpi=500, units = "in", height = 12, width = 10)
 
 #' -----------------------------------------------------------------------------
 #' Avoided premature deaths
@@ -694,8 +666,8 @@ ggsave(hs2_maps,
 
 rate_pop <- 10000
 
-#' Health scenario 1 (s == 7 & 8)
-s <- 7
+#' Health scenario 1 (s == 1 & 2)
+s <- 1
 
 load(paste("./HIA Outputs/", pre[s], "zcta_impacts.RData", sep=""))
 out_df_1 <- out_df
@@ -786,54 +758,50 @@ plot(hs1_na_mort_sf["rate"])
 hs1_ac_mort <- ggplot() +
   geom_sf(data = hs1_ac_mort_sf, aes(fill = rate), inherit.aes = F,
           color = NA) +
-  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
-                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
-                  colour = "red", segment.colour = "red", segment.size = 0.3,
+  geom_text_repel(data = pp, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = -2,
+                  colour = "white", segment.colour = "white", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
-  scale_fill_viridis(name = "Avoided deaths\nper 10,000") + 
+  scale_fill_viridis(name = "Avoided deaths\nper 10,000", na.value = "grey50") + 
   map_theme +
-  theme(legend.position = c(0.8, 0.8),
+  theme(legend.position = "right",
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
   xlab("") + ylab("") +
-  coord_sf(ylim = c(36.8, 40.5),
-           xlim = c(-106.5, -102)) +
-  north(x.min = -106.5, x.max = -102,
-        y.min =  36.8, y.max = 40.5,
+  north(x.min = -109, x.max = -102,
+        y.min =  37, y.max = 41,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -102.75, y = 37.25)) +
-  scalebar(x.min = -106.5, x.max = -102,
-           y.min =  36.8, y.max = 40.5,
-           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+        anchor = c(x = -102.75, y = 36.75)) +
+  scalebar(x.min = -109, x.max = -102,
+           y.min =  37, y.max = 41,
+           dist = 100, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 36.3), st.dist = 0.04)
 hs1_ac_mort
 
 
 hs1_na_mort <- ggplot() +
   geom_sf(data = hs1_na_mort_sf, aes(fill = rate), inherit.aes = F,
           color = NA) +
-  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
-                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
-                  colour = "red", segment.colour = "red", segment.size = 0.3,
+  geom_text_repel(data = pp, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = -2,
+                  colour = "white", segment.colour = "white", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
-  scale_fill_viridis(name = "Avoided deaths\nper 10,000") + 
+  scale_fill_viridis(name = "Avoided deaths\nper 10,000", na.value = "grey50") + 
   map_theme +
-  theme(legend.position = c(0.8, 0.8),
+  theme(legend.position = "right",
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
   xlab("") + ylab("") +
-  coord_sf(ylim = c(36.8, 40.5), 
-           xlim = c(-106.5, -102)) +
-  north(x.min = -106.5, x.max = -102,
-        y.min =  36.8, y.max = 40.5,
+  north(x.min = -109, x.max = -102,
+        y.min =  37, y.max = 41,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -102.75, y = 37.25)) +
-  scalebar(x.min = -106.5, x.max = -102,
-           y.min =  36.8, y.max = 40.5,
-           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+        anchor = c(x = -102.75, y = 36.75)) +
+  scalebar(x.min = -109, x.max = -102,
+           y.min =  37, y.max = 41,
+           dist = 100, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 36.3), st.dist = 0.04)
 hs1_na_mort
 
-#' Health scenario 2 (s == 9 & 10)
-s <- 9
+#' Health scenario 2 (s == 3 & 4)
+s <- 3
 
 load(paste("./HIA Outputs/", pre[s], "zcta_impacts.RData", sep=""))
 out_df_1 <- out_df
@@ -905,49 +873,45 @@ plot(hs2_na_mort_sf["rate"])
 hs2_ac_mort <- ggplot() +
   geom_sf(data = hs2_ac_mort_sf, aes(fill = rate), inherit.aes = F,
           color = NA) +
-  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
-                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
-                  colour = "red", segment.colour = "red", segment.size = 0.3,
+  geom_text_repel(data = pp, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = - 2,
+                  colour = "white", segment.colour = "white", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
-  scale_fill_viridis(name = "Avoided deaths\nper 10,000") + 
+  scale_fill_viridis(name = "Avoided deaths\nper 10,000", na.value = "grey50") + 
   map_theme +
-  theme(legend.position = c(0.8, 0.8),
+  theme(legend.position = "right",
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
   xlab("") + ylab("") +
-  coord_sf(ylim = c(36.8, 40.5),
-           xlim = c(-106.5, -102)) +
-  north(x.min = -106.5, x.max = -102,
-        y.min =  36.8, y.max = 40.5,
+  north(x.min = -109, x.max = -102,
+        y.min =  37, y.max = 41,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -102.75, y = 37.25)) +
-  scalebar(x.min = -106.5, x.max = -102,
-           y.min =  36.8, y.max = 40.5,
-           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+        anchor = c(x = -102.75, y = 36.75)) +
+  scalebar(x.min = -109, x.max = -102,
+           y.min =  37, y.max = 41,
+           dist = 100, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 36.3), st.dist = 0.04)
 
 
 hs2_na_mort <- ggplot() +
   geom_sf(data = hs2_na_mort_sf, aes(fill = rate), inherit.aes = F,
           color = NA) +
-  geom_text_repel(data = pp_sf, aes(label = id, geometry = geometry),
-                  stat = "sf_coordinates", direction = "x", nudge_x = 2,
-                  colour = "red", segment.colour = "red", segment.size = 0.3,
+  geom_text_repel(data = pp, aes(label = id, geometry = geometry),
+                  stat = "sf_coordinates", direction = "x", nudge_x = - 2,
+                  colour = "white", segment.colour = "white", segment.size = 0.3,
                   inherit.aes = F, show.legend = F) +
-  scale_fill_viridis(name = "Avoided deaths\nper 10,000") + 
+  scale_fill_viridis(name = "Avoided deaths\nper 10,000", na.value = "grey50") + 
   map_theme +
-  theme(legend.position = c(0.8, 0.8),
+  theme(legend.position = "right",
         plot.margin=grid::unit(c(0,0,0,0), "mm")) +
   xlab("") + ylab("") +
-  coord_sf(ylim = c(36.8, 40.5), 
-           xlim = c(-106.5, -102)) +
-  north(x.min = -106.5, x.max = -102,
-        y.min =  36.8, y.max = 40.5,
+  north(x.min = -109, x.max = -102,
+        y.min =  37, y.max = 41,
         symbol = 12, location = "bottomright", scale = 0.075,
-        anchor = c(x = -102.75, y = 37.25)) +
-  scalebar(x.min = -106.5, x.max = -102,
-           y.min =  36.8, y.max = 40.5,
-           dist = 60, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
-           height = 0.02, anchor = c(x = -102.6, y = 37.0), st.dist = 0.025)
+        anchor = c(x = -102.75, y = 36.75)) +
+  scalebar(x.min = -109, x.max = -102,
+           y.min =  37, y.max = 41,
+           dist = 100, dd2km=T, model="WGS84", st.bottom = F, st.size = 3,
+           height = 0.02, anchor = c(x = -102.6, y = 36.3), st.dist = 0.04)
 
 #' Combine them!
 library(ggpubr)
@@ -958,7 +922,7 @@ hs1_mortality <- ggarrange(hs1_ac_mort, hs1_na_mort,
 hs1_mortality
 ggsave(hs1_mortality,
        filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/HS1_Avoided_Deaths.jpeg", 
-       device = "jpeg", dpi=500, units = "in", height = 6, width = 8)
+       device = "jpeg", dpi=500, units = "in", height = 7, width = 10)
 
 hs2_mortality <- ggarrange(hs2_ac_mort, hs2_na_mort, 
                            labels = c("A", "B"),
@@ -966,7 +930,7 @@ hs2_mortality <- ggarrange(hs2_ac_mort, hs2_na_mort,
 hs2_mortality
 ggsave(hs2_mortality,
        filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/HS2_Avoided_Deaths.jpeg", 
-       device = "jpeg", dpi=500, units = "in", height = 6, width = 8)
+       device = "jpeg", dpi=500, units = "in", height = 7, width = 10)
 
 
 #' -----------------------------------------------------------------------------
@@ -1000,7 +964,7 @@ ses <- read.table(ses_file, header=T, stringsAsFactors = F) %>%
   dplyr::select(zcta, total_pop, pct_nhw, med_income,
                 pct_hs_grad, pct_employed, pct_hh_not_limited_eng)
 
-load("./HIA Outputs/HIA_Winter_HIA_Summer_zcta_combined.RData")
+load("./HIA Outputs/HIA_CF_BL_Winter_AllCO_HIA_CF_BL_Summer_AllCO_zcta_combined.RData")
 impacts <- select(combined_df, zcta, pol, outcome, median_scaled) %>% 
   left_join(ses, by="zcta") %>% 
   mutate(rate = (median_scaled / total_pop) * rate_pop) %>% 
@@ -1491,12 +1455,6 @@ springs_ac_mort <- ggplot() +
                    nudge_x = -0.2, nudge_y = -0.1,
                    colour = "red", segment.colour = "red", segment.size = 0.3,
                    inherit.aes = F, show.legend = F) +
-  geom_label_repel(data = high_zcta, 
-                   aes(label = name, geometry = geometry),
-                   stat = "sf_coordinates", direction = "x", 
-                   nudge_y = 0.1, colour = "red", segment.colour = "red", 
-                   segment.size = 0.3,
-                   inherit.aes = F, show.legend = F) +
   scale_fill_viridis(name = "Avoided deaths\nper 10,000") +
   map_theme2 +
   theme(legend.position = c(0.8, 0.3),
@@ -1702,8 +1660,8 @@ library(IC2)
 
 rate_pop <- 10000
 
-#' Health scenario 1 (s == 7 & 8)
-s <- 7
+#' Health scenario 1 (s == 1 & 2)
+s <- 1
 
 load(paste("./HIA Outputs/", pre[s], "zcta_impacts.RData", sep=""))
 out_df_1 <- out_df
@@ -1739,6 +1697,9 @@ impacts2 <- ungroup(combined_df) %>%
   mutate(rate = (median_scaled / total_pop) * rate_pop) %>% 
   mutate(rate = ifelse(rate < 0, NA, rate))
 
+#' Just use SFR zctas
+impacts2 <- filter(impacts2, zcta %in% sfr_zips)
+
 #' Which ZCTA has the highest all-cause rate?
 #' 80904
 ac_mort_rates <- filter(impacts2, outcome == "mort_ac") %>% 
@@ -1760,6 +1721,22 @@ pueblo_zips <- c("81001", "81003", "81004", "81005", "81006",
 
 pueblo_impacts <- filter(impacts2, zcta %in% pueblo_zips)
 
+sfr_zips <-  c("80938", "80939", "80951", "81001", "81003", "81004", "81005",
+               "81006", "81007", "81008", "81019", "81020", "81022", "81023",
+               "81025", "81039", "81040", "80918", "80919", "80920", "80921",
+               "80922", "80923", "80924", "80925", "80926", "80927", "80928",
+               "80929", "80930", "80863", "80864", "80902", "80903", "80904",
+               "80905", "80906", "80907", "80908", "80909", "80910", "80911",
+               "80913", "80914", "80915", "80916", "80917", "81059", "81062", 
+               "81067", "81069", "81089", "81131", "81143", "80106", "80118",
+               "80808", "80809", "80813", "80814", "80816", "80817", "80819",
+               "80132", "80133", "80135", "80449", "81212", "81221", "81222",
+               "81223", "81226", "81232", "81233", "81240", "81244", "81252",
+               "81253", "81155", "81201", "80820", "80827", "80829", "80830", 
+               "80831", "80832", "80833", "80835", "80840", "80860")
+
+sfr_impacts <- filter(impacts2, zcta %in% sfr_zips)
+
 concentration <- impacts2  %>%
   select(pol, outcome, ses_indic, ses_value, rate) %>%
   mutate(rate = ifelse(rate < 0, NA, rate)) %>%
@@ -1779,7 +1756,7 @@ mort_eng <- filter(impacts2, ses_indic == "pct_hh_not_limited_eng") %>%
 mort_income <- filter(impacts2, ses_indic == "med_income") %>% 
   filter(outcome == "mort_ac")
 
-jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/AC_Mort_Conc_Curves.jpeg",
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/All_AC_Mort_Conc_Curves.jpeg",
      width = 5, height = 5, units = "in", res = 500)
 curveConcent(mort_nhw$rate, mort_nhw$ses_value, col="red", lty = 1,
              xlab = paste("Social advantage rank"),
@@ -1812,7 +1789,7 @@ na_mort_eng <- filter(impacts2, ses_indic == "pct_hh_not_limited_eng") %>%
 na_mort_income <- filter(impacts2, ses_indic == "med_income") %>% 
   filter(outcome == "st_mort_na")
 
-jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/NA_Mort_Conc_Curves.jpeg",
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/All_NA_Mort_Conc_Curves.jpeg",
      width = 5, height = 5, units = "in", res = 500)
 curveConcent(na_mort_nhw$rate, na_mort_nhw$ses_value, col="red", lty = 1,
              xlab = paste("Social advantage rank"),
@@ -1845,7 +1822,7 @@ res_eng <- filter(impacts2, ses_indic == "pct_hh_not_limited_eng") %>%
 res_income <- filter(impacts2, ses_indic == "med_income") %>% 
   filter(outcome == "hosp_res")
 
-jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Res_Conc_Curves.jpeg",
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/All_Res_Conc_Curves.jpeg",
      width = 5, height = 5, units = "in", res = 500)
 curveConcent(res_nhw$rate, res_nhw$ses_value, col="red", lty = 1,
              xlab = paste("Social advantage rank"),
@@ -1878,7 +1855,7 @@ cvd_eng <- filter(impacts2, ses_indic == "pct_hh_not_limited_eng") %>%
 cvd_income <- filter(impacts2, ses_indic == "med_income") %>% 
   filter(outcome == "hosp_cvd")
 
-jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/CVD_Conc_Curves.jpeg",
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/All_CVD_Conc_Curves.jpeg",
      width = 5, height = 5, units = "in", res = 500)
 curveConcent(cvd_nhw$rate, cvd_nhw$ses_value, col="red", lty = 1,
              xlab = paste("Social advantage rank"),
@@ -2144,7 +2121,7 @@ cvd_eng <- filter(pueblo_impacts, ses_indic == "pct_hh_not_limited_eng") %>%
 cvd_income <- filter(pueblo_impacts, ses_indic == "med_income") %>% 
   filter(outcome == "hosp_cvd")
 
-jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Springs_CVD_Conc_Curves.jpeg",
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/Pueblo_CVD_Conc_Curves.jpeg",
      width = 5, height = 5, units = "in", res = 500)
 curveConcent(cvd_nhw$rate, cvd_nhw$ses_value, col="red", lty = 1,
              xlab = paste("Social advantage rank"),
@@ -2165,33 +2142,136 @@ curveConcent(cvd_income$rate, cvd_income$ses_value, col="orange", lty = 5, add =
 text(x = 0.05, y = 0.9, labels = c("B: Cardiovascular hospitalizations"), pos = 4)
 dev.off()
 
-#' -----------------------------------------------------------------------------
-#' SES variables for the entire study area and the most impacted
-#' -----------------------------------------------------------------------------
+#' SFR ZCTAS
+#' All-cause mortality plots
+mort_nhw <- filter(sfr_impacts, ses_indic == "pct_nhw") %>% 
+  filter(outcome == "mort_ac")
+mort_hs_grad <- filter(sfr_impacts, ses_indic == "pct_hs_grad") %>% 
+  filter(outcome == "mort_ac")
+mort_employed <- filter(sfr_impacts, ses_indic == "pct_employed") %>% 
+  filter(outcome == "mort_ac")
+mort_eng <- filter(sfr_impacts, ses_indic == "pct_hh_not_limited_eng") %>% 
+  filter(outcome == "mort_ac")
+mort_income <- filter(sfr_impacts, ses_indic == "med_income") %>% 
+  filter(outcome == "mort_ac")
 
-ses_file <- "./HIA Inputs/ses indicators.txt"
-ses <- read.table(ses_file, header=T, stringsAsFactors = F) %>%
-  mutate(GEOID = gsub("86000US", "", GEOID)) %>%
-  dplyr::rename(zcta = GEOID) %>%
-  dplyr::select(zcta, total_pop, pct_nhw, med_income,
-                pct_hs_grad, pct_employed, pct_hh_not_limited_eng)
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/SFR_AC_Mort_Conc_Curves.jpeg",
+     width = 5, height = 5, units = "in", res = 500)
+curveConcent(mort_nhw$rate, mort_nhw$ses_value, col="red", lty = 1,
+             xlab = paste("Social advantage rank"),
+             ylab = paste("Cumulative benefits"))
+curveConcent(mort_hs_grad$rate, mort_hs_grad$ses_value, col="black", lty = 2, add = T)
+curveConcent(mort_employed$rate, mort_employed$ses_value, col="blue", lty = 3, add = T)
+curveConcent(mort_eng$rate, mort_eng$ses_value, col="darkgreen", lty = 4, add = T)
+curveConcent(mort_income$rate, mort_income$ses_value, col="orange", lty = 5, add = T)
+legend(x = 0.48, y = 0.38, cex = 0.6,
+       title = "Indicator of ZCTA-level social advantage",
+       col = c("red", "black", "blue", "darkgreen", "orange"),
+       lty = c(1, 2, 3, 4, 5),
+       legend = c("Non-Hispanic white population",
+                  "High school graduates",
+                  "Employment",
+                  "Proficiency in English",
+                  "Median income (2014$)"))
+text(x = 0.05, y = 0.9, labels = c("A: All-cause mortality"), pos = 4)
+dev.off()
 
-#' All zcta
-load("./HIA Inputs/HIA_Winter_zcta.RData")
-zcta_sf <- st_as_sf(zcta) %>% 
-  st_zm(drop = T)
-head(zcta_sf)
-all_zcta <- unique(zcta_sf$GEOID10)
+#' non-accidental mortality plots
+na_mort_nhw <- filter(sfr_impacts, ses_indic == "pct_nhw") %>% 
+  filter(outcome == "st_mort_na")
+na_mort_hs_grad <- filter(sfr_impacts, ses_indic == "pct_hs_grad") %>% 
+  filter(outcome == "st_mort_na")
+na_mort_employed <- filter(sfr_impacts, ses_indic == "pct_employed") %>% 
+  filter(outcome == "st_mort_na")
+na_mort_eng <- filter(sfr_impacts, ses_indic == "pct_hh_not_limited_eng") %>% 
+  filter(outcome == "st_mort_na")
+na_mort_income <- filter(sfr_impacts, ses_indic == "med_income") %>% 
+  filter(outcome == "st_mort_na")
 
-all_zcta_ses <- filter(ses, zcta %in% all_zcta) %>% 
-  summarize(total_pop = sum(total_pop),
-            mean_nhw = mean(pct_nhw, na.rm=T),
-            mean_income = mean(med_income, na.rm=T),
-            mean_ed = mean(pct_hs_grad, na.rm=T),
-            mean_emp = mean(pct_employed, na.rm=T),
-            mean_eng = mean(pct_hh_not_limited_eng, na.rm=T))
-all_zcta_ses
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/SFR_NA_Mort_Conc_Curves.jpeg",
+     width = 5, height = 5, units = "in", res = 500)
+curveConcent(na_mort_nhw$rate, na_mort_nhw$ses_value, col="red", lty = 1,
+             xlab = paste("Social advantage rank"),
+             ylab = paste("Cumulative benefits"))
+curveConcent(na_mort_hs_grad$rate, na_mort_hs_grad$ses_value, col="black", lty = 2, add = T)
+curveConcent(na_mort_employed$rate, na_mort_employed$ses_value, col="blue", lty = 3, add = T)
+curveConcent(na_mort_eng$rate, na_mort_eng$ses_value, col="darkgreen", lty = 4, add = T)
+curveConcent(na_mort_income$rate, na_mort_income$ses_value, col="orange", lty = 5, add = T)
+# legend(x = 0.48, y = 0.38, cex = 0.6,
+#        title = "Indicator of ZCTA-level social advantage",
+#        col = c("red", "black", "blue", "darkgreen", "orange"),
+#        lty = c(1, 2, 3, 4, 5),
+#        legend = c("Non-Hispanic white population",
+#                   "High school graduates",
+#                   "Employment",
+#                   "Proficiency in English",
+#                   "Median income (2014$)"))
+text(x = 0.05, y = 0.9, labels = c("B: Non-accidental mortality"), pos = 4)
+dev.off()
 
-zcta_ses <- filter(ses, zcta == "80904")
-zcta_ses
+#' respiratory hosp plots
+res_nhw <- filter(sfr_impacts, ses_indic == "pct_nhw") %>% 
+  filter(outcome == "hosp_res")
+res_hs_grad <- filter(sfr_impacts, ses_indic == "pct_hs_grad") %>% 
+  filter(outcome == "hosp_res")
+res_employed <- filter(sfr_impacts, ses_indic == "pct_employed") %>% 
+  filter(outcome == "hosp_res")
+res_eng <- filter(sfr_impacts, ses_indic == "pct_hh_not_limited_eng") %>% 
+  filter(outcome == "hosp_res")
+res_income <- filter(sfr_impacts, ses_indic == "med_income") %>% 
+  filter(outcome == "hosp_res")
+
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/SFR_Res_Conc_Curves.jpeg",
+     width = 5, height = 5, units = "in", res = 500)
+curveConcent(res_nhw$rate, res_nhw$ses_value, col="red", lty = 1,
+             xlab = paste("Social advantage rank"),
+             ylab = paste("Cumulative benefits"))
+curveConcent(res_hs_grad$rate, res_hs_grad$ses_value, col="black", lty = 2, add = T)
+curveConcent(res_employed$rate, res_employed$ses_value, col="blue", lty = 3, add = T)
+curveConcent(res_eng$rate, res_eng$ses_value, col="darkgreen", lty = 4, add = T)
+curveConcent(res_income$rate, res_income$ses_value, col="orange", lty = 5, add = T)
+legend(x = 0.48, y = 0.38, cex = 0.6,
+       title = "Indicator of ZCTA-level social advantage",
+       col = c("red", "black", "blue", "darkgreen", "orange"),
+       lty = c(1, 2, 3, 4, 5),
+       legend = c("Non-Hispanic white population",
+                  "High school graduates",
+                  "Employment",
+                  "Proficiency in English",
+                  "Median income (2014$)"))
+text(x = 0.05, y = 0.9, labels = c("A: Respiratory hospitalizations"), pos = 4)
+dev.off()
+
+#' cvd hosp plots
+cvd_nhw <- filter(sfr_impacts, ses_indic == "pct_nhw") %>% 
+  filter(outcome == "hosp_cvd")
+cvd_hs_grad <- filter(sfr_impacts, ses_indic == "pct_hs_grad") %>% 
+  filter(outcome == "hosp_cvd")
+cvd_employed <- filter(sfr_impacts, ses_indic == "pct_employed") %>% 
+  filter(outcome == "hosp_cvd")
+cvd_eng <- filter(sfr_impacts, ses_indic == "pct_hh_not_limited_eng") %>% 
+  filter(outcome == "hosp_cvd")
+cvd_income <- filter(sfr_impacts, ses_indic == "med_income") %>% 
+  filter(outcome == "hosp_cvd")
+
+jpeg(filename = "C:/Users/semarten/Dropbox/ALA_HIA/Manuscript/Figures/SFR_CVD_Conc_Curves.jpeg",
+     width = 5, height = 5, units = "in", res = 500)
+curveConcent(cvd_nhw$rate, cvd_nhw$ses_value, col="red", lty = 1,
+             xlab = paste("Social advantage rank"),
+             ylab = paste("Cumulative benefits"))
+curveConcent(cvd_hs_grad$rate, cvd_hs_grad$ses_value, col="black", lty = 2, add = T)
+curveConcent(cvd_employed$rate, cvd_employed$ses_value, col="blue", lty = 3, add = T)
+curveConcent(cvd_eng$rate, cvd_eng$ses_value, col="darkgreen", lty = 4, add = T)
+curveConcent(cvd_income$rate, cvd_income$ses_value, col="orange", lty = 5, add = T)
+# legend(x = 0.48, y = 0.38, cex = 0.6,
+#        title = "Indicator of ZCTA-level social advantage",
+#        col = c("red", "black", "blue", "darkgreen", "orange"),
+#        lty = c(1, 2, 3, 4, 5),
+#        legend = c("Non-Hispanic white population",
+#                   "High school graduates",
+#                   "Employment",
+#                   "Proficiency in English",
+#                   "Median income (2014$)"))
+text(x = 0.05, y = 0.9, labels = c("B: Cardiovascular hospitalizations"), pos = 4)
+dev.off()
 
