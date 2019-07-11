@@ -29,7 +29,11 @@ library(writexl)
 library(viridis)
 
 #' Google API for ggmap
+<<<<<<< HEAD
 google_api_key <- "replace_key_here"
+=======
+google_api_key <- "AIzaSyA_eKisw1HJSG0umLvCzgQI8bekuhpN5Cc"
+>>>>>>> 0a881eadc8491976353bed6beb8dde0f209d3f58
 register_google(key = google_api_key)
 
 #' For ggplots
